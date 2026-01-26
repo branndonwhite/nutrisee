@@ -29,7 +29,51 @@ export const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
   cardText: { fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 20 },
-  
+  calorieSummaryBar: {
+    flexDirection: 'row',
+    backgroundColor: '#BDBDBD', // Grey background from screenshot
+    borderRadius: 8,
+    marginBottom: 20,
+    overflow: 'hidden',
+    height: 60,
+  },
+  calorieSummaryItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 5,
+  },
+  borderRight: {
+    borderRightWidth: 1,
+    borderRightColor: '#999',
+  },
+  calorieLabel: {
+    fontSize: 10,
+    textAlign: 'center',
+    fontWeight: '500',
+    color: '#333',
+  },
+  nutrientGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  nutrientGridItem: {
+    width: '48%', // Two items per row with a small gap
+    height: 45,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: '#FFF',
+  },
+  nutrientText: {
+    fontSize: 11,
+    textAlign: 'center',
+    color: '#333',
+  },
   // Tab Bar
   tabBar: { 
     flexDirection: 'row', 

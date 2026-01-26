@@ -48,9 +48,36 @@ export default function DashboardScreen() {
             <Text style={styles.cardText}>Estimasi kalori yang dikeluarkan kegiatan berdasarkan GPS/smartwatch, rekomendasi makanan, saran makanan yang perlu dihindari, etc</Text>
           </View>
           
+          {/* Card 2: Stat Nutrisi Harian - Updated Grid Layout */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Stat Nutrisi Harian</Text>
-            <Text style={styles.cardText}>Digambarkan dengan bar graph melingkupi: Kalori, Karbohidrat, Protein, Lemak, etc.</Text>
+            
+            {/* Top Calorie Summary Bar */}
+            <View style={styles.calorieSummaryBar}>
+              <View style={[styles.calorieSummaryItem, styles.borderRight]}>
+                <Text style={styles.calorieLabel}>Kalori Terbakar</Text>
+              </View>
+              <View style={[styles.calorieSummaryItem, styles.borderRight]}>
+                <Text style={styles.calorieLabel}>Kalori Masuk</Text>
+              </View>
+              <View style={styles.calorieSummaryItem}>
+                <Text style={styles.calorieLabel}>Kebutuhan{"\n"}Kalori Harian</Text>
+              </View>
+            </View>
+
+            {/* Nutrient Grid */}
+            <View style={styles.nutrientGrid}>
+              {[
+                "Karbohidrat", "Protein", 
+                "Lemak", "Gula", 
+                "Serat", "Kolesterol", 
+                "Kalsium", "Vitamin A/C/D\n(Klik utk info lebih)"
+              ].map((nutrient, index) => (
+                <View key={index} style={styles.nutrientGridItem}>
+                  <Text style={styles.nutrientText}>{nutrient}</Text>
+                </View>
+              ))}
+            </View>
           </View>
 
           <View style={styles.card}>
