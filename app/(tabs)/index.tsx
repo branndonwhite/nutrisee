@@ -92,12 +92,18 @@ export default function DashboardScreen() {
         <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)}>
           <View style={styles.menuContainer}>
             <View style={styles.menuContent}>
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => {
+                  setIsMenuOpen(false); // Close the modal
+                  router.push('/text-scan'); // Navigate to the new screen
+                }}
+              >
                 <MaterialCommunityIcons name="paperclip" size={32} color="black" />
                 <Text style={styles.menuLabelTitle}>Deskripsi Teks</Text>
                 <Text style={styles.menuLabelSub}>Ketik deskripsi makanan yang ingin kamu cek nutrisinya.</Text>
               </TouchableOpacity>
-
+              
               <TouchableOpacity style={styles.menuItem} onPress={handleTakeImage}>
                 <Ionicons name="camera-outline" size={32} color="black" />
                 <Text style={styles.menuLabelTitle}>Ambil Gambar</Text>
