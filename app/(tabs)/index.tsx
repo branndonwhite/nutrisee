@@ -17,19 +17,9 @@ export default function DashboardScreen() {
   const router = useRouter();
 
   // Logic for "Ambil Gambar" button
-  const handleTakeImage = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setIsMenuOpen(false);
-      // Logic to handle the captured image URI would go here
-    }
+  const handleTakeImage = () => {
+    setIsMenuOpen(false); // Close the popup menu
+    router.push('/image-scan'); // Navigate to your custom embedded camera screen
   };
 
   return (
@@ -92,12 +82,18 @@ export default function DashboardScreen() {
         <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)}>
           <View style={styles.menuContainer}>
             <View style={styles.menuContent}>
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => {
+                  setIsMenuOpen(false); // Close the modal
+                  router.push('/text-scan'); // Navigate to the new screen
+                }}
+              >
                 <MaterialCommunityIcons name="paperclip" size={32} color="black" />
                 <Text style={styles.menuLabelTitle}>Deskripsi Teks</Text>
                 <Text style={styles.menuLabelSub}>Ketik deskripsi makanan yang ingin kamu cek nutrisinya.</Text>
               </TouchableOpacity>
-
+              
               <TouchableOpacity style={styles.menuItem} onPress={handleTakeImage}>
                 <Ionicons name="camera-outline" size={32} color="black" />
                 <Text style={styles.menuLabelTitle}>Ambil Gambar</Text>
