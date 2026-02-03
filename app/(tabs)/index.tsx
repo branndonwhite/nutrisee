@@ -17,19 +17,9 @@ export default function DashboardScreen() {
   const router = useRouter();
 
   // Logic for "Ambil Gambar" button
-  const handleTakeImage = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setIsMenuOpen(false);
-      // Logic to handle the captured image URI would go here
-    }
+  const handleTakeImage = () => {
+    setIsMenuOpen(false); // Close the popup menu
+    router.push('/image-scan'); // Navigate to your custom embedded camera screen
   };
 
   return (
