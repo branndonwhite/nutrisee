@@ -16,7 +16,11 @@ export default function DashboardScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
 
-  // Logic for "Ambil Gambar" button
+  const handleTakeText = () => {
+    setIsMenuOpen(false);
+    router.push('/text-scan');
+  };
+
   const handleTakeImage = () => {
     setIsMenuOpen(false); // Close the popup menu
     router.push('/image-scan'); // Navigate to your custom embedded camera screen
@@ -82,13 +86,7 @@ export default function DashboardScreen() {
         <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)}>
           <View style={styles.menuContainer}>
             <View style={styles.menuContent}>
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => {
-                  setIsMenuOpen(false); // Close the modal
-                  router.push('/text-scan'); // Navigate to the new screen
-                }}
-              >
+              <TouchableOpacity style={styles.menuItem} onPress={handleTakeText}>
                 <MaterialCommunityIcons name="paperclip" size={32} color="black" />
                 <Text style={styles.menuLabelTitle}>Deskripsi Teks</Text>
                 <Text style={styles.menuLabelSub}>Ketik deskripsi makanan yang ingin kamu cek nutrisinya.</Text>
