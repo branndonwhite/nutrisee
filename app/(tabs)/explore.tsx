@@ -1,112 +1,114 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const { width } = Dimensions.get('window');
 
-export default function TabTwoScreen() {
+export default function ProgressionScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Pencapaian</Text>
+          <Text style={styles.headerSub}>Apa saja sih yang sudah kamu capai bersama Nutrisee sejauh ini?</Text>
+        </View>
+
+        <View style={styles.content}>
+          {/* AI Summary Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>AI Summary</Text>
+            <Text style={styles.summaryText}>
+              "Wah, minggu ini kamu rajin banget makan sayur... atau itu cuma garnish di samping burger? Teruslah bergerak, lemakmu nggak bakal lari sendiri kalau kamunya cuma duduk!"
+            </Text>
+          </View>
+
+          {/* Sliding Graphs Section */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Grafik-grafik bisa dislide ke samping</Text>
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              style={styles.graphSlider}
+            >
+              {[
+                "1. Grafik Konsumsi Kalori Seminggu",
+                "2. Grafik ratio makanan berlemak vs berserat",
+                "3. Grafik Kalori Defisit seminggu terakhir",
+                "4. Grafik perkiraan penurunan berat badan ke depannya"
+              ].map((text, index) => (
+                <View key={index} style={styles.graphPlaceholder}>
+                  <Text style={styles.graphLabel}>{text}</Text>
+                  {/* Visual placeholder for the actual graph */}
+                  <View style={styles.graphBox}>
+                    <View style={styles.crossLine1} />
+                    <View style={styles.crossLine2} />
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Badges Section */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Badges</Text>
+            <Text style={styles.cardSub}>Koleksi Badge yang sudah didapatkan user sejauh ini</Text>
+            <View style={styles.badgeRow}>
+              {[1, 2, 3, 4, 5].map((item) => (
+                <View key={item} style={styles.badgeCircle} />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  header: { 
+    backgroundColor: '#000', 
+    padding: 25, 
+    borderBottomLeftRadius: 35, 
+    borderBottomRightRadius: 35,
+    paddingBottom: 40 
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  headerTitle: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
+  headerSub: { color: '#AAA', fontSize: 13, marginTop: 10, lineHeight: 18 },
+  content: { paddingHorizontal: 20, marginTop: -20 },
+  card: { 
+    backgroundColor: '#FFF', 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10
   },
+  cardTitle: { fontWeight: 'bold', fontSize: 15, textAlign: 'center', marginBottom: 10 },
+  cardSub: { fontSize: 11, color: '#888', textAlign: 'center', marginBottom: 15 },
+  summaryText: { fontSize: 13, textAlign: 'center', fontStyle: 'italic', lineHeight: 20, color: '#333' },
+  
+  // Graph Styles
+  graphSlider: { marginTop: 10 },
+  graphPlaceholder: { width: width - 80, alignItems: 'center' },
+  graphLabel: { fontSize: 11, color: '#666', marginBottom: 15, textAlign: 'center' },
+  graphBox: { 
+    width: '100%', 
+    height: 150, 
+    borderWidth: 1, 
+    borderColor: '#DDD', 
+    position: 'relative' 
+  },
+  crossLine1: { position: 'absolute', width: '120%', height: 1, backgroundColor: '#DDD', top: '50%', left: '-10%', transform: [{ rotate: '25deg' }] },
+  crossLine2: { position: 'absolute', width: '120%', height: 1, backgroundColor: '#DDD', top: '50%', left: '-10%', transform: [{ rotate: '-25deg' }] },
+
+  // Badge Styles
+  badgeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  badgeCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#E0E0E0' }
 });
