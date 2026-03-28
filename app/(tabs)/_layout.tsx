@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Platform } from 'react-native';
+import BlurTabBarBackground from '@/components/TabBarBackground';
 
 export default function TabLayout() {
   const router = useRouter();
@@ -11,10 +12,9 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        // 1. THE BAR CONTAINER
         tabBarStyle: styles.tabBar,
-        // 2. THE ICON CENTERING LOGIC
         tabBarItemStyle: styles.tabItem,
+        tabBarBackground: BlurTabBarBackground
       }}
     >
       {/* ROUTE: app/(tabs)/index.tsx */}
