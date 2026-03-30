@@ -9,6 +9,13 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Environment variables
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+
 # Native
 .kotlin/
 *.orig.*
@@ -41,3 +48,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Editor
+.vscode/

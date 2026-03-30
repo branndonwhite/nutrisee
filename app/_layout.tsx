@@ -9,6 +9,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { Redirect } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,13 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
+
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <Redirect href="/(auth)/register" />
+    </>
+  );
 
   return <Stack />;
 }
