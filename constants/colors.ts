@@ -10,4 +10,5 @@ export const COLORS = {
   link: '#4285F4',
   white: '#FFFFFF',
   divider: '#E0E0E0',
+  blue: '#2563EB',
 };
