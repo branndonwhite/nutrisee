@@ -7,26 +7,12 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Modal,
-  FlatList,
+  Image
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Svg, { Path } from 'react-native-svg';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
-
-const NIcon = () => (
-  <Svg viewBox="0 0 355.12 324.87" width={28} height={28}>
-    <Path
-      fill="#fff"
-      d="M284.3,324.87c-2.22,0-4.47-.04-6.76-.11-53.75-1.76-93.72-44.66-101.84-109.3-6.11-48.59,10.65-110.09,18.78-136.07-1.55-.38-2.84-.3-3.5.25-48.34,39.73-89.71,119.29-94.2,181.14-.64,8.88-7.88,15.83-16.78,16.12-8.86.34-16.57-6.18-17.79-14.99-10.57-76.28,12.66-141.4,26.54-180.31,4.5-12.61,8.4-23.53,9.27-29.58-1.23-4.48-15.63-15.53-34.91-17.02-13.7-1.06-22.42,3.12-25.91,12.44-3.09,8.23-3.23,14.98-.44,20.62,4.93,9.95,18.35,15.84,23.11,17.28l-9.7,33.4c-3.21-.92-31.74-9.74-44.42-34.93-5.05-10.04-9.35-26.62-1.11-48.57C15.34,6.64,45.26-6.1,80.86,2.79c28.23,7.04,55.05,27.66,51.68,53.43-1.26,9.66-5.58,21.75-11.04,37.06-2.6,7.28-5.44,15.26-8.29,23.89,16.24-25.22,35.31-47.66,55.68-64.41,16.96-13.94,43.6-9.92,59.39,8.96,3.96,4.73,5.11,11.21,3.03,17.02-.28.77-27.85,78.69-21.11,132.37,5.87,46.75,32.75,77.7,68.48,78.88,37.03,1.23,60.95-9.99,61.19-10.11l15.26,31.25c-1.19.59-28.43,13.72-70.82,13.72Z"
-    />
-    <Path
-      fill="#fff"
-      d="M340.24,176.85l-12.74-3.47c-4.93-1.34-7.83-6.42-6.49-11.35l3.47-12.74c1.34-4.93-1.56-10.01-6.49-11.35l-12.74-3.47c-4.93-1.34-10.01,1.56-11.35,6.49l-3.47,12.74c-1.34,4.93-6.42,7.83-11.35,6.49l-12.74-3.47c-4.93-1.34-10.01,1.56-11.35,6.49l-3.47,12.74c-1.34,4.93,1.56,10.01,6.49,11.35l12.74,3.47c4.93,1.34,7.83,6.42,6.49,11.35l-3.47,12.74c-1.34,4.93,1.56,10.01,6.49,11.35l12.74,3.47c4.93,1.34,10.01-1.56,11.35-6.49l3.47-12.74c1.34-4.93,6.42-7.83,11.35-6.49l12.74,3.47c4.93,1.34,10.01-1.56,11.35-6.49l3.47-12.74c1.34-4.93-1.56-10.01-6.49-11.35Z"
-    />
-  </Svg>
-);
+import NIcon from '../../assets/images/icon/ICON_N White.svg';
 
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan', 'Lainnya'];
 
@@ -53,14 +39,20 @@ export default function PersonalInfoScreen() {
     <ScrollView
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
+      style={{ overflow: 'visible' }}
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Yuk berkenalan</Text>
-        <Text style={styles.title}>dengan <Text style={styles.titleBrand}>Nutrisee</Text></Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Yuk berkenalan dengan</Text>
+          <Image
+            source={require('../../assets/images/branding/LOGO_Text_Colored.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.subtitle}>
-          Data yang kamu input akan mempengaruhi pengalaman{'\n'}
-          penggunaan aplikasi Nutrisee yang lebih optimal.
+          Data yang kamu input akan mempengaruhi pengalaman penggunaan aplikasi Nutrisee yang lebih optimal.
         </Text>
       </View>
 
@@ -68,7 +60,7 @@ export default function PersonalInfoScreen() {
       <View style={styles.nicknameCard}>
         <View style={styles.nicknameCardHeader}>
           <Text style={styles.nicknameCardTitle}>Halo, nama saya adalah...</Text>
-          <NIcon />
+          <NIcon width={28} height={28} />
         </View>
         <TextInput
           style={styles.nicknameInput}
@@ -81,24 +73,51 @@ export default function PersonalInfoScreen() {
       </View>
 
       {/* Gender Picker */}
-      <TouchableOpacity
-        style={styles.fieldRow}
-        onPress={() => setShowGenderPicker(true)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.fieldLabelContainer}>
-          <Text style={styles.fieldLabel}>Jenis Kelamin</Text>
-        </View>
-        <View style={styles.fieldValueContainer}>
-          <Text style={[
-            styles.fieldValue,
-            !gender && styles.fieldPlaceholder
-          ]}>
-            {gender || 'Pilih'}
-          </Text>
-          <Text style={styles.dropdownArrow}>▼</Text>
-        </View>
-      </TouchableOpacity>
+      <View style={styles.fieldWrapper}>
+        <TouchableOpacity
+          style={styles.fieldRow}
+          onPress={() => setShowGenderPicker(!showGenderPicker)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.fieldLabelContainer}>
+            <Text style={styles.fieldLabel}>Jenis Kelamin</Text>
+          </View>
+          <View style={styles.fieldValueContainer}>
+            <Text style={[styles.fieldValue, !gender && styles.fieldPlaceholder]}>
+              {gender || 'Pilih'}
+            </Text>
+            <Text style={styles.dropdownArrow}>
+              {showGenderPicker ? '▲' : '▼'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Inline Dropdown */}
+        {showGenderPicker && (
+          <View style={styles.dropdown}>
+            {GENDER_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.dropdownOption,
+                  gender === item && styles.dropdownOptionSelected,
+                ]}
+                onPress={() => {
+                  setGender(item);
+                  setShowGenderPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownOptionText,
+                  gender === item && styles.dropdownOptionTextSelected,
+                ]}>
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
 
       {/* Date of Birth Picker */}
       <TouchableOpacity
@@ -150,47 +169,6 @@ export default function PersonalInfoScreen() {
         Nutrisee berkomitmen untuk menggunakan data pribadi{'\n'}
         anda hanya untuk kebutuhan fungsional aplikasi.
       </Text>
-
-      {/* Gender Picker Modal */}
-      <Modal
-        visible={showGenderPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowGenderPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowGenderPicker(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pilih Jenis Kelamin</Text>
-            <FlatList
-              data={GENDER_OPTIONS}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.modalOption,
-                    gender === item && styles.modalOptionSelected
-                  ]}
-                  onPress={() => {
-                    setGender(item);
-                    setShowGenderPicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalOptionText,
-                    gender === item && styles.modalOptionTextSelected
-                  ]}>
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </ScrollView>
   );
 }
@@ -200,36 +178,43 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: COLORS.background,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 100,
     paddingBottom: 32,
   },
   header: {
     alignItems: 'center',
     marginBottom: 28,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
   title: {
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.semiBold,
     fontSize: 22,
     color: COLORS.text,
     textAlign: 'center',
   },
-  titleBrand: {
-    fontFamily: FONTS.extraBold,
-    fontSize: 22,
-    color: '#2563EB',
+  logo: {
+    width: 110,
+    height: 49,
+    marginVertical: 10
   },
   subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: -12,
     lineHeight: 20,
   },
   nicknameCard: {
-    backgroundColor: '#2563EB',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#013397',
+    borderRadius: 20,
+    padding: 10,
     marginBottom: 16,
   },
   nicknameCardHeader: {
@@ -239,40 +224,46 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   nicknameCardTitle: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 16,
+    fontFamily: FONTS.bold,
+    fontSize: 22,
     color: '#fff',
     fontStyle: 'italic',
+    fontWeight: 'bold'
   },
   nicknameInput: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 40,
     fontFamily: FONTS.medium,
     fontSize: 22,
-    color: '#2563EB',
+    color: '#013397',
     textAlign: 'center',
+  },
+  fieldWrapper: {
+    position: 'relative',
+    zIndex: 10,
+    marginBottom: 12,
   },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#2563EB',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
+    backgroundColor: '#024FE9',
+    borderRadius: 20,
+    // marginBottom: 12,
+    padding: 6,
+    paddingRight: 8
   },
   fieldLabelContainer: {
-    backgroundColor: '#2563EB',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    minWidth: 130,
+    paddingVertical: 12,
+    minWidth: 150,
   },
   fieldLabel: {
     fontFamily: FONTS.semiBold,
-    fontSize: 14,
+    fontSize: 18,
     color: '#fff',
+    fontStyle: 'italic',
   },
   fieldValueContainer: {
     flex: 1,
@@ -280,10 +271,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff', 
+    borderRadius: 15,
   },
   fieldValue: {
     fontFamily: FONTS.medium,
-    fontSize: 14,
+    fontSize: 18,
     color: COLORS.text,
   },
   fieldPlaceholder: {
@@ -293,6 +287,39 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.placeholder,
   },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    width: '55%',       // aligns with the value container width
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginTop: 4,
+    zIndex: 20,
+    // shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  dropdownOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  dropdownOptionText: {
+    fontFamily: FONTS.medium,
+    fontSize: 15,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  dropdownOptionTextSelected: {
+    color: '#024FE9',
+    fontFamily: FONTS.semiBold,
+  },
   doneButton: {
     alignItems: 'flex-end',
     paddingVertical: 8,
@@ -301,19 +328,19 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#2563EB',
+    color: '#024FE9',
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 20,
+    marginTop: 58,
+    marginBottom: 54,
   },
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
-    fontSize: 16,
+    fontSize: 18,
     color: COLORS.white,
   },
   footerNote: {

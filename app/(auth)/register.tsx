@@ -1,10 +1,12 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
-import { SvgUri } from 'react-native-svg';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import { AntDesign } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function RegisterScreen() {
+  const router = useRouter();
+
   return (
     <ScrollView 
       contentContainerStyle={styles.container}
@@ -41,7 +43,10 @@ export default function RegisterScreen() {
       </View>
 
       {/* Lanjutkan Button */}
-      <TouchableOpacity style={styles.primaryButton}>
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => router.push('/(auth)/personal-info')}
+      >
         <Text style={styles.primaryButtonText}>Lanjutkan</Text>
       </TouchableOpacity>
 
