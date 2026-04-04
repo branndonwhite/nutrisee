@@ -1,29 +1,65 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
-import { FONTS } from '../../constants/fonts';
-import { COLORS } from '../../constants/colors';
-import { AntDesign } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { AntDesign } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useRegister } from '../../context/RegisterContext';
+import { COLORS } from "../../constants/colors";
+import { FONTS } from "../../constants/fonts";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { setData } = useRegister();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Email dan kata sandi harus diisi");
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert("Error", "Kata sandi minimal 8 karakter");
+      return;
+    }
+
+    // Just save to context, no API call
+    setData({ email, password });
+    router.push('/(auth)/personal-info');
+  };
 
   return (
-    <ScrollView 
+    <ScrollView
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
     >
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
-          source={require('../../assets/images/branding/LOGO_Text_Colored.png')}
+          source={require("../../assets/images/branding/LOGO_Text_Colored.png")}
           style={styles.logo}
           resizeMode="contain"
         />
       </View>
 
       {/* Heading */}
-      <Text style={styles.heading}>Daftar untuk memulai perjalanan sehatmu!</Text>
-      <Text style={styles.subheading}>Masukkan email dan kata sandi untuk mendaftar!</Text>
+      <Text style={styles.heading}>
+        Daftar untuk memulai perjalanan sehatmu!
+      </Text>
+      <Text style={styles.subheading}>
+        Masukkan email dan kata sandi untuk mendaftar!
+      </Text>
 
       {/* Inputs */}
       <View style={styles.inputContainer}>
@@ -33,21 +69,30 @@ export default function RegisterScreen() {
           placeholderTextColor={COLORS.placeholder}
           keyboardType="email-address"
           autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
         <TextInput
           style={styles.input}
           placeholder="Kata Sandi"
           placeholderTextColor={COLORS.placeholder}
           secureTextEntry
+          value={password}
+          onChangeText={setPassword}
         />
       </View>
 
       {/* Lanjutkan Button */}
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => router.push('/(auth)/personal-info')}
+        onPress={() => router.push("/(auth)/personal-info")} //change to handleRegister once all UI done
+        disabled={loading}
       >
-        <Text style={styles.primaryButtonText}>Lanjutkan</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.primaryButtonText}>Lanjutkan</Text>
+        )}
       </TouchableOpacity>
 
       {/* Divider */}
@@ -60,7 +105,7 @@ export default function RegisterScreen() {
       {/* Google Button */}
       <TouchableOpacity style={styles.socialButton}>
         <Image
-          source={{ uri: 'https://www.google.com/favicon.ico' }}
+          source={{ uri: "https://www.google.com/favicon.ico" }}
           style={styles.socialIcon}
         />
         <Text style={styles.socialButtonText}>Lanjutkan dengan Google</Text>
@@ -74,11 +119,9 @@ export default function RegisterScreen() {
 
       {/* Terms */}
       <Text style={styles.terms}>
-        Dengan memilih Lanjutkan, anda setuju kepada{' '}
-        <Text style={styles.link}>Syarat dan Ketentuan Layanan</Text>
-        {' '}serta{' '}
-        <Text style={styles.link}>Kebijakan Privasi</Text>
-        {' '}kami.
+        Dengan memilih Lanjutkan, anda setuju kepada{" "}
+        <Text style={styles.link}>Syarat dan Ketentuan Layanan</Text> serta{" "}
+        <Text style={styles.link}>Kebijakan Privasi</Text> kami.
       </Text>
     </ScrollView>
   );
@@ -90,12 +133,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 32
+    paddingBottom: 32,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 80,
-    marginBottom: 28, 
+    marginBottom: 28,
   },
   logo: {
     width: 160,
@@ -105,20 +148,20 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     fontSize: 14,
     color: COLORS.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 6,
   },
   subheading: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   inputContainer: {
     gap: 16,
     paddingVertical: 16,
-    paddingHorizontal: 8
+    paddingHorizontal: 8,
   },
   input: {
     backgroundColor: COLORS.background,
@@ -136,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 16,
     marginHorizontal: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
@@ -144,8 +187,8 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 24,
   },
   dividerLine: {
@@ -160,9 +203,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.secondary,
     borderWidth: 1,
     borderColor: COLORS.inputBorder,
@@ -189,13 +232,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
     lineHeight: 18,
   },
   link: {
     fontFamily: FONTS.semiBold,
     color: COLORS.text,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
 });
