@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,66 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Image
+  Image,
+  PixelRatio
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import NIcon from '../../assets/images/icon/ICON_N White.svg';
+import { useRouter } from 'expo-router';
+import { Alert, ActivityIndicator } from 'react-native';
+import { useRegister } from '../../context/RegisterContext';
 
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan', 'Lainnya'];
 
 export default function PersonalInfoScreen() {
+  const router = useRouter();
+  const { setData } = useRegister();
+
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const genderValueRef = useRef<View>(null);
+  const dateValueRef = useRef<View>(null);
+  const [valueLayout, setValueLayout] = useState({ 
+    top: 0, 
+    left: 0,
+    width: 0,
+  });
+  const scrollRef = useRef<ScrollView>(null);
+  const [scrollY, setScrollY] = useState(0);
+
+  const openGenderPicker = () => {
+    genderValueRef.current?.measureInWindow((gx, gy, gwidth, gheight) => {
+      setValueLayout({
+        top: gy + gheight,
+        left: gx,
+        width: gwidth,
+      });
+      setShowGenderPicker(true);
+    });
+  };
+
+  const handleSubmit = () => {
+  if (!nickname || !gender || !dateOfBirth) {
+    Alert.alert('Error', 'Semua field harus diisi');
+    return;
+  }
+
+  // save to context only, no API call
+  setData({
+    nickname,
+    gender,
+    date_of_birth: dateOfBirth.toISOString().split('T')[0],
+  });
+
+  router.push('/(auth)/weight'); 
+};
 
   const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, '0');
@@ -36,65 +81,146 @@ export default function PersonalInfoScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-      style={{ overflow: 'visible' }}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Yuk berkenalan dengan</Text>
-          <Image
-            source={require('../../assets/images/branding/LOGO_Text_Colored.png')}
-            style={styles.logo}
-            resizeMode="contain"
+    <View style={styles.root}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Yuk berkenalan</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>dengan </Text>
+            <Image
+              source={require('../../assets/images/branding/LOGO_Text_Colored.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.subtitle}>
+            Data yang kamu input akan mempengaruhi pengalaman{'\n'}
+            penggunaan aplikasi Nutrisee yang lebih optimal.
+          </Text>
+        </View>
+
+        {/* Nickname Input Card */}
+        <View style={styles.nicknameCard}>
+          <View style={styles.nicknameCardHeader}>
+            <Text style={styles.nicknameCardTitle}>Halo, nama saya adalah...</Text>
+            <NIcon width={28} height={28} />
+          </View>
+          <TextInput
+            style={styles.nicknameInput}
+            placeholder="Martinus"
+            placeholderTextColor="#A0B4D6"
+            value={nickname}
+            onChangeText={setNickname}
+            maxLength={30}
           />
         </View>
-        <Text style={styles.subtitle}>
-          Data yang kamu input akan mempengaruhi pengalaman penggunaan aplikasi Nutrisee yang lebih optimal.
-        </Text>
-      </View>
 
-      {/* Nickname Input Card */}
-      <View style={styles.nicknameCard}>
-        <View style={styles.nicknameCardHeader}>
-          <Text style={styles.nicknameCardTitle}>Halo, nama saya adalah...</Text>
-          <NIcon width={28} height={28} />
+        {/* Gender Picker */}
+        <View style={styles.fieldWrapper}>
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldLabelContainer}>
+              <Text style={styles.fieldLabel}>Jenis Kelamin</Text>
+            </View>
+            <TouchableOpacity
+              ref={genderValueRef}
+              style={styles.fieldValueContainer}
+              onPress={openGenderPicker}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.fieldValue, !gender && styles.fieldPlaceholder]}>
+                {gender || 'Pilih'}
+              </Text>
+              <Text style={styles.dropdownArrow}>
+                {showGenderPicker ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <TextInput
-          style={styles.nicknameInput}
-          placeholder="Martinus"
-          placeholderTextColor="#A0B4D6"
-          value={nickname}
-          onChangeText={setNickname}
-          maxLength={30}
-        />
-      </View>
 
-      {/* Gender Picker */}
-      <View style={styles.fieldWrapper}>
-        <TouchableOpacity
-          style={styles.fieldRow}
-          onPress={() => setShowGenderPicker(!showGenderPicker)}
-          activeOpacity={0.8}
+        {/* Date of Birth Picker */}
+        <View style={{ marginBottom: 12 }}>
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldLabelContainer}>
+              <Text style={styles.fieldLabel}>Tanggal Lahir</Text>
+            </View>
+            <TouchableOpacity
+              ref={dateValueRef}
+              style={styles.fieldValueContainer}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.fieldValue,
+                !dateOfBirth && styles.fieldPlaceholder
+              ]}>
+                {dateOfBirth ? formatDate(dateOfBirth) : 'DD/MM/YYYY'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={dateOfBirth || new Date(2000, 0, 1)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
+
+        {/* iOS Date Picker Done Button */}
+        {showDatePicker && Platform.OS === 'ios' && (
+          <TouchableOpacity
+            style={styles.doneButton}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <Text style={styles.doneButtonText}>Selesai</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Lanjutkan Button */}
+        <TouchableOpacity 
+          style={styles.primaryButton} 
+          onPress={handleSubmit}    // ← make sure this is here
+          disabled={loading}
         >
-          <View style={styles.fieldLabelContainer}>
-            <Text style={styles.fieldLabel}>Jenis Kelamin</Text>
-          </View>
-          <View style={styles.fieldValueContainer}>
-            <Text style={[styles.fieldValue, !gender && styles.fieldPlaceholder]}>
-              {gender || 'Pilih'}
-            </Text>
-            <Text style={styles.dropdownArrow}>
-              {showGenderPicker ? '▲' : '▼'}
-            </Text>
-          </View>
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.primaryButtonText}>Lanjutkan</Text>
+          }
         </TouchableOpacity>
 
-        {/* Inline Dropdown */}
-        {showGenderPicker && (
-          <View style={styles.dropdown}>
+        {/* Footer note */}
+        <Text style={styles.footerNote}>
+          Nutrisee berkomitmen untuk menggunakan data pribadi{'\n'}
+          anda hanya untuk kebutuhan fungsional aplikasi.
+        </Text>
+      </ScrollView>
+      {/* Dim overlay + dropdown OUTSIDE ScrollView */}
+      {showGenderPicker && (
+        <>
+          <TouchableOpacity
+            style={styles.dimOverlay}
+            activeOpacity={1}
+            onPress={() => setShowGenderPicker(false)}
+          />
+          <View style={[
+            styles.dropdown,
+            {
+              top: valueLayout.top,
+              left: valueLayout.left,
+              width: valueLayout.width,
+            }
+          ]}>
             {GENDER_OPTIONS.map((item) => (
               <TouchableOpacity
                 key={item}
@@ -116,69 +242,30 @@ export default function PersonalInfoScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        )}
-      </View>
-
-      {/* Date of Birth Picker */}
-      <TouchableOpacity
-        style={styles.fieldRow}
-        onPress={() => setShowDatePicker(true)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.fieldLabelContainer}>
-          <Text style={styles.fieldLabel}>Tanggal Lahir</Text>
-        </View>
-        <View style={styles.fieldValueContainer}>
-          <Text style={[
-            styles.fieldValue,
-            !dateOfBirth && styles.fieldPlaceholder
-          ]}>
-            {dateOfBirth ? formatDate(dateOfBirth) : 'DD/MM/YYYY'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={dateOfBirth || new Date(2000, 0, 1)}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
+        </>
       )}
-
-      {/* iOS Date Picker Done Button */}
-      {showDatePicker && Platform.OS === 'ios' && (
-        <TouchableOpacity
-          style={styles.doneButton}
-          onPress={() => setShowDatePicker(false)}
-        >
-          <Text style={styles.doneButtonText}>Selesai</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Lanjutkan Button */}
-      <TouchableOpacity style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>Lanjutkan</Text>
-      </TouchableOpacity>
-
-      {/* Footer note */}
-      <Text style={styles.footerNote}>
-        Nutrisee berkomitmen untuk menggunakan data pribadi{'\n'}
-        anda hanya untuk kebutuhan fungsional aplikasi.
-      </Text>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  dimOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 10,
+  },
   container: {
     flexGrow: 1,
-    backgroundColor: COLORS.background,
     paddingHorizontal: 24,
-    paddingTop: 100,
+    paddingTop: 80,
     paddingBottom: 32,
   },
   header: {
@@ -189,8 +276,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 4,
   },
   title: {
     fontFamily: FONTS.semiBold,
@@ -201,14 +286,13 @@ const styles = StyleSheet.create({
   logo: {
     width: 110,
     height: 49,
-    marginVertical: 10
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: -12,
+    marginTop: 10,
     lineHeight: 20,
   },
   nicknameCard: {
@@ -239,10 +323,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#013397',
     textAlign: 'center',
+    minHeight: 170
   },
   fieldWrapper: {
     position: 'relative',
-    zIndex: 10,
+    zIndex: 20,
     marginBottom: 12,
   },
   fieldRow: {
@@ -250,14 +335,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#024FE9',
     borderRadius: 20,
-    // marginBottom: 12,
     padding: 6,
     paddingRight: 8
   },
   fieldLabelContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    minWidth: 150,
+    minWidth: 162,
   },
   fieldLabel: {
     fontFamily: FONTS.semiBold,
@@ -289,22 +373,18 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: '100%',
-    right: 0,
-    width: '55%',       // aligns with the value container width
     backgroundColor: '#fff',
     borderRadius: 16,
-    marginTop: 4,
     zIndex: 20,
-    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 8,
+    overflow: 'hidden',
   },
   dropdownOption: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
   },
   dropdownOptionSelected: {
@@ -312,7 +392,7 @@ const styles = StyleSheet.create({
   },
   dropdownOptionText: {
     fontFamily: FONTS.medium,
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.text,
     textAlign: 'center',
   },
@@ -336,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 58,
-    marginBottom: 54,
+    marginBottom: 40,
   },
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
