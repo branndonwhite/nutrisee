@@ -190,7 +190,7 @@ export default function PersonalInfoScreen() {
         {/* Lanjutkan Button */}
         <TouchableOpacity 
           style={styles.primaryButton} 
-          onPress={handleSubmit}    // ← make sure this is here
+          onPress={() => router.push("/(auth)/weight")}    // ← make sure this is here
           disabled={loading}
         >
           {loading
