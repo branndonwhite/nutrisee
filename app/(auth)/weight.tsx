@@ -18,13 +18,13 @@ import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
 
 const MIN_WEIGHT = 20;
-const MAX_WEIGHT = 500;
+const MAX_WEIGHT = 155;
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const SCALE_HEIGHT = 300;
+const SCALE_HEIGHT = 250;
 const RADIUS = SCREEN_WIDTH * 0.7;
 const CENTER_X = SCREEN_WIDTH / 2;
 const CENTER_Y = RADIUS * 1.1;
-const DEG_PER_KG = 2.5;
+const DEG_PER_KG = 2.4;
 const SVG_PADDING_TOP = 30; // space for labels above arc
 
 export default function WeightScreen() {
@@ -160,9 +160,9 @@ export default function WeightScreen() {
               x={labelX}
               y={labelY + 4}
               textAnchor="middle"
-              fontSize={13}
+              fontSize={23}
               fill="#888"
-              fontFamily={FONTS.regular}
+              fontFamily={FONTS.bold}
             >
               {kg}
             </SvgText>
@@ -222,11 +222,6 @@ export default function WeightScreen() {
           {renderTicks()}
         </Svg>
       </View>
-      
-      {/* Center label — completely outside scaleContainer */}
-      {weight % 5 === 0 && (
-        <Text style={styles.centerLabel}>{weight}</Text>
-      )}
 
       {/* Next Button */}
       <TouchableOpacity style={styles.nextButton} onPress={handleSubmit}>
@@ -246,12 +241,13 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 32
   },
   header: {
     alignItems: "center",
-    marginBottom: 24,
-    paddingHorizontal: 24,
+    marginBottom: 28,
   },
   titleRow: {
     flexDirection: "row",
@@ -273,19 +269,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 10,
     lineHeight: 20,
   },
   weightCard: {
     backgroundColor: "#FF3E00",
     borderRadius: 20,
-    marginHorizontal: 28,
     padding: 10,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   weightCardTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 18,
+    fontSize: 22,
     color: "#fff",
     fontStyle: "italic",
     marginBottom: 8,
@@ -300,6 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 170
   },
   weightInput: {
     fontFamily: FONTS.extraBold,
@@ -314,7 +310,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     alignSelf: "flex-end",
     marginBottom: 26,
-    marginLeft: -8,
+    marginLeft: -4,
   },
   scaleContainer: {
     height: SCALE_HEIGHT + SVG_PADDING_TOP,
@@ -324,24 +320,14 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1,
   },
-  centerLabel: {
-    position: 'absolute',
-    top: -9,           
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: '#888',
-    zIndex: 25
-  },
   indicatorContainer: {
     position: "absolute",
-    top: 475,
+    top: 468 + (SCALE_HEIGHT / 12),
     left: 0,
     right: 0,
     alignItems: "center",
     zIndex: 15,
+    paddingTop: 25
   },
   indicatorArrow: {
     width: 0,
@@ -361,19 +347,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
     position: "absolute",
-    bottom: 100,
+    bottom: 110,
     zIndex: 20,
   },
   nextButtonText: {
     color: "#fff",
     fontSize: 28,
-    fontFamily: FONTS.bold,
-    lineHeight: 32,
+    fontFamily: FONTS.semiBold,
   },
   footerNote: {
     fontFamily: FONTS.regular,
@@ -381,9 +366,8 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 18,
-    paddingHorizontal: 24,
     position: "absolute",
-    bottom: 38,
+    bottom: 34,
     left: 0,
     right: 0,
   },
