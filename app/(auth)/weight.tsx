@@ -132,16 +132,21 @@ export default function WeightScreen() {
       const outerX = CENTER_X + RADIUS * Math.sin(angleRad);
       const outerY = CENTER_Y - RADIUS * Math.cos(angleRad) + SVG_PADDING_TOP;
       const innerX = CENTER_X + (RADIUS - tickLength) * Math.sin(angleRad);
-      const innerY = CENTER_Y - (RADIUS - tickLength) * Math.cos(angleRad) + SVG_PADDING_TOP;
+      const innerY =
+        CENTER_Y - (RADIUS - tickLength) * Math.cos(angleRad) + SVG_PADDING_TOP;
 
       // Label above outer edge
       const labelRadius = RADIUS + 28;
       const labelX = CENTER_X + labelRadius * Math.sin(angleRad);
-      const labelY = CENTER_Y - labelRadius * Math.cos(angleRad) + SVG_PADDING_TOP;
+      const labelY =
+        CENTER_Y - labelRadius * Math.cos(angleRad) + SVG_PADDING_TOP;
 
       // Relaxed visibility — only clip if truly off screen
-      const isLabelVisible = labelY > 0 && labelY < SCALE_HEIGHT + SVG_PADDING_TOP
-        && labelX > 0 && labelX < SCREEN_WIDTH;
+      const isLabelVisible =
+        labelY > 0 &&
+        labelY < SCALE_HEIGHT + SVG_PADDING_TOP &&
+        labelX > 0 &&
+        labelX < SCREEN_WIDTH;
 
       ticks.push(
         <React.Fragment key={kg}>
@@ -224,7 +229,7 @@ export default function WeightScreen() {
       </View>
 
       {/* Next Button */}
-      <TouchableOpacity style={styles.nextButton} onPress={handleSubmit}>
+      <TouchableOpacity style={styles.nextButton} onPress={() => router.push("/(auth)/height")}> //change to handleSubmit once done
         <Text style={styles.nextButtonText}>›</Text>
       </TouchableOpacity>
 
@@ -243,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingHorizontal: 24,
     paddingTop: 80,
-    paddingBottom: 32
+    paddingBottom: 32,
   },
   header: {
     alignItems: "center",
@@ -295,7 +300,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 170
+    minHeight: 170,
   },
   weightInput: {
     fontFamily: FONTS.extraBold,
@@ -322,12 +327,12 @@ const styles = StyleSheet.create({
   },
   indicatorContainer: {
     position: "absolute",
-    top: 468 + (SCALE_HEIGHT / 12),
+    top: 468 + SCALE_HEIGHT / 12,
     left: 0,
     right: 0,
     alignItems: "center",
     zIndex: 15,
-    paddingTop: 25
+    paddingTop: 25,
   },
   indicatorArrow: {
     width: 0,
