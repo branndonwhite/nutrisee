@@ -228,16 +228,19 @@ export default function WeightScreen() {
         </Svg>
       </View>
 
-      {/* Next Button */}
-      <TouchableOpacity style={styles.nextButton} onPress={() => router.push("/(auth)/height")}> //change to handleSubmit once done
-        <Text style={styles.nextButtonText}>›</Text>
-      </TouchableOpacity>
+      {/* Bottom section — normal flow */}
+      <View style={styles.bottomSection}>
+        {/* Next Button */}
+        <TouchableOpacity style={styles.nextButton} onPress={() => router.push("/(auth)/height")}>
+          <Text style={styles.nextButtonText}>›</Text>
+        </TouchableOpacity>
 
-      {/* Footer */}
-      <Text style={styles.footerNote}>
-        Nutrisee berkomitmen untuk menggunakan data pribadi{"\n"}
-        anda hanya untuk kebutuhan fungsional aplikasi.
-      </Text>
+        {/* Footer */}
+        <Text style={styles.footerNote}>
+          Nutrisee berkomitmen untuk menggunakan data pribadi{"\n"}
+          anda hanya untuk kebutuhan fungsional aplikasi.
+        </Text>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -248,7 +251,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingHorizontal: 24,
     paddingTop: 80,
-    paddingBottom: 32,
   },
   header: {
     alignItems: "center",
@@ -348,6 +350,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
   },
+  bottomSection: {
+    alignItems: 'center',
+    paddingBottom: 34,
+    paddingTop: 8,
+    marginTop: 'auto',   // pushes to bottom of screen
+  },
   nextButton: {
     backgroundColor: COLORS.primary,
     width: 56,
@@ -355,9 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
-    position: "absolute",
-    bottom: 110,
+    marginBottom: 40,
     zIndex: 20,
   },
   nextButtonText: {
@@ -371,9 +377,5 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 18,
-    position: "absolute",
-    bottom: 34,
-    left: 0,
-    right: 0,
   },
 });
