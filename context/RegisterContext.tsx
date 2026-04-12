@@ -8,6 +8,8 @@ type RegisterData = {
   date_of_birth: string;
   height: number;
   weight: number;
+  activity_level: string;
+  diet_goal: string;
 };
 
 type RegisterContextType = {
