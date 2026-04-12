@@ -16,7 +16,6 @@ import { useRouter } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import { useRegister } from '../../context/RegisterContext';
-import { register, completeProfile } from '../../api/auth';
 
 const MIN_HEIGHT = 100;
 const MAX_HEIGHT = 250;
@@ -26,7 +25,7 @@ const RULER_HEIGHT = 400;
 
 export default function HeightScreen() {
   const router = useRouter();
-  const { data, clearData } = useRegister();
+  const { setData } = useRegister();
 
   const [height, setHeight] = useState(164);
   const [inputText, setInputText] = useState('164');
@@ -97,26 +96,9 @@ export default function HeightScreen() {
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      // Step 1: Register user
-      await register(data.email!, data.password!);
-      // Step 2: Save health profile
-      await completeProfile({
-        nickname: data.nickname!,
-        gender: data.gender!,
-        date_of_birth: data.date_of_birth!,
-        height,
-        weight: data.weight!,
-      });
-      clearData();
-    //   router.replace('/(app)/home');
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = () => {
+    setData({ height });
+    router.push('/(auth)/activity-level');
   };
 
   const renderRuler = () => {
@@ -227,7 +209,7 @@ export default function HeightScreen() {
       <View style={styles.bottomSection}>
         <TouchableOpacity
           style={styles.nextButton}
-          onPress={handleSubmit}
+          onPress={() => router.push("/(auth)/activity-level")}
           disabled={loading}
         >
           <Text style={styles.nextButtonText}>›</Text>
