@@ -13,7 +13,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
-import NIcon from '../../assets/images/icon/ICON_N White.svg';
+import NIcon from '../../assets/images/icon/ICON_N_White.svg';
 import { useRouter } from 'expo-router';
 import { Alert, ActivityIndicator } from 'react-native';
 import { useRegister } from '../../context/RegisterContext';
