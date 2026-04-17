@@ -61,7 +61,7 @@ export default function HomeScreen() {
   const cardHeightsRef = useRef<number[]>([]);
   const measuredRef = useRef(0);
   const [snapPositions, setSnapPositions] = useState<number[]>([]);
-  const snapPositionsRef = useRef<number[]>([]); // ref so PanResponder always sees latest values
+  const snapPositionsRef = useRef<number[]>([]);
 
   // Current focused card index
   const currentIndexRef = useRef(0);
@@ -91,7 +91,7 @@ export default function HomeScreen() {
     measuredRef.current += 1;
     if (measuredRef.current === TOTAL_CARDS) {
       const positions = buildSnapPositions(cardHeightsRef.current);
-      snapPositionsRef.current = positions; // keep ref in sync for PanResponder closure
+      snapPositionsRef.current = positions;
       setSnapPositions(positions);
       translateY.setValue(positions[0]);
     }
@@ -425,9 +425,7 @@ export default function HomeScreen() {
                   router.push('/(app)/nutriscan-text');
                 }}
               >
-                <View style={styles.modalOptionIconBox}>
-                  <TextIcon width={40} height={40} />
-                </View>
+                <TextIcon width={40} height={40} fill="#000" />
                 <Text style={styles.modalOptionLabel}>Deskripsi Teks</Text>
                 <Text style={styles.modalOptionDesc}>
                   Ketik deskripsi makanan{'\n'}yang ingin kamu cek{'\n'}nutrisinya.
@@ -441,9 +439,7 @@ export default function HomeScreen() {
                   router.push('/(app)/nutriscan-camera');
                 }}
               >
-                <View style={styles.modalOptionIconBox}>
-                  <NutriscanIcon width={40} height={40} />
-                </View>
+                <NutriscanIcon width={40} height={40} fill="#000" stroke="#000" />
                 <Text style={styles.modalOptionLabel}>Ambil Gambar</Text>
                 <Text style={styles.modalOptionDesc}>
                   Cek nutrisi makananmu{'\n'}menggunakan NutriSEE{'\n'}AI Image Recognition.
@@ -869,26 +865,29 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FF3E00',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: 48,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    // No bottom radius — bleeds into home bar
+    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 999, // bleeds way below screen bottom
+    marginBottom: -999, // pulls it back so it sits flush
   },
   modalOptions: { flexDirection: 'row', gap: 12 },
   modalOption: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingVertical: 16, paddingBottom: 30, paddingHorizontal: 8,
+    borderTopLeftRadius: 19,
+    borderTopRightRadius: 19,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    paddingBottom: 28,
     alignItems: 'center',
-  },
-  modalOptionIconBox: {
-    width: 64, height: 64, borderRadius: 16,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
+    gap: 12,
   },
   modalOptionLabel: {
     fontFamily: FONTS.bold, fontSize: 16, color: COLORS.text,
-    marginBottom: 8, textAlign: 'center',
+    marginBottom: 4, textAlign: 'center',
   },
   modalOptionDesc: {
     fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textSecondary,
