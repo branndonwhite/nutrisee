@@ -21,10 +21,14 @@ import {
 } from '../../assets/images/icon';
 import { statue, body, fish } from '../../assets/images/bg-photo';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+// 3-column grid: full width minus horizontal padding (16*2) minus 2 gaps (10*2), divided by 3
+const GRID_PADDING = 32;
+const GRID_GAP = 10;
+const NUTRITION_COL_WIDTH = (SCREEN_WIDTH - GRID_PADDING - GRID_GAP * 2) / 3;
 
-const HEADER_HEIGHT = 100;
-const NAVBAR_HEIGHT = Platform.OS === 'ios' ? 96 : 80;
+const HEADER_HEIGHT = 120;
+const NAVBAR_HEIGHT = Platform.OS === 'ios' ? 140 : 120;
 const VIEWPORT_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - NAVBAR_HEIGHT;
 const CARD_GAP = 24;
 
@@ -44,7 +48,7 @@ const DUMMY = {
   },
   pencapaian: { label: 'Defisit', value: '3000', unit: 'kkal', description: 'dalam 3 hari' },
   diet: { value: '10kg', description: 'turun dalam 1 bulan.' },
-  favorit: { label: 'Raja Laut 🐟', description: 'Kamu mengonsumsi lebih dari 5 porsi Ikan dalam seminggu ini!' },
+  favorit: { label: 'Raja Laut 🐟', description: 'Kamu mengonsumsi lebih \n dari 5 porsi Ikan \n dalam seminggu ini!' },
 };
 
 const TOTAL_CARDS = 3;
@@ -57,7 +61,7 @@ export default function HomeScreen() {
   const cardHeightsRef = useRef<number[]>([]);
   const measuredRef = useRef(0);
   const [snapPositions, setSnapPositions] = useState<number[]>([]);
-  const snapPositionsRef = useRef<number[]>([]);
+  const snapPositionsRef = useRef<number[]>([]); // ref so PanResponder always sees latest values
 
   // Current focused card index
   const currentIndexRef = useRef(0);
@@ -87,8 +91,8 @@ export default function HomeScreen() {
     measuredRef.current += 1;
     if (measuredRef.current === TOTAL_CARDS) {
       const positions = buildSnapPositions(cardHeightsRef.current);
-      snapPositionsRef.current = positions; // <-- ref for PanResponder closure
-      setSnapPositions(positions);          // <-- state for getCardStyle interpolation
+      snapPositionsRef.current = positions; // keep ref in sync for PanResponder closure
+      setSnapPositions(positions);
       translateY.setValue(positions[0]);
     }
   };
@@ -114,9 +118,8 @@ export default function HomeScreen() {
         Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8,
 
       onPanResponderGrant: () => {
-        // Freeze current value as offset so drag starts from current position
         translateY.stopAnimation();
-        translateY.extractOffset(); // <-- replaces setOffset(_value) + setValue(0)
+        translateY.extractOffset();
       },
 
       onPanResponderMove: Animated.event(
@@ -236,14 +239,23 @@ export default function HomeScreen() {
             const item = DUMMY.nutrition[key];
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
+            const progress = Math.min(item.consumed / item.goal, 1);
             return (
               <View key={key} style={styles.nutritionCard}>
                 <View style={styles.nutritionCardHeader}>
                   <Text style={styles.nutritionLabel}>{label}</Text>
                   <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>gr</Text></Text>
                 </View>
-                <View style={[styles.nutritionBox, { backgroundColor: color }]}>
-                  <Text style={styles.nutritionValue}>{item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text></Text>
+                {/* Vertical bar — same concept as calorieBar but rotated */}
+                <View style={styles.nutritionBar}>
+                  {/* Remaining space (top) */}
+                  <View style={[styles.nutritionBarRemaining, { flex: 1 - progress }]} />
+                  {/* Filled portion (bottom) */}
+                  <View style={[styles.nutritionBarFill, { flex: progress, backgroundColor: color }]}>
+                    <Text style={styles.nutritionValue}>
+                      {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
@@ -254,24 +266,32 @@ export default function HomeScreen() {
             const item = DUMMY.nutrition[key];
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
+            const progress = Math.min(item.consumed / item.goal, 1);
             return (
               <View key={key} style={styles.nutritionCard}>
                 <View style={styles.nutritionCardHeader}>
                   <Text style={styles.nutritionLabel}>{label}</Text>
                   <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>gr</Text></Text>
                 </View>
-                <View style={[styles.nutritionBox, { backgroundColor: color }]}>
-                  <Text style={styles.nutritionValue}>{item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text></Text>
+                <View style={styles.nutritionBar}>
+                  <View style={[styles.nutritionBarRemaining, { flex: 1 - progress }]} />
+                  <View style={[styles.nutritionBarFill, { flex: progress, backgroundColor: color }]}>
+                    <Text style={styles.nutritionValue}>
+                      {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
           })}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowScanModal(true)}
-          >
-            <Text style={styles.addButtonText}>+</Text>
-          </TouchableOpacity>
+          <View style={styles.addButtonWrapper}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowScanModal(true)}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -494,7 +514,7 @@ const styles = StyleSheet.create({
 
   // ── AI Card ───────────────────────────────────────────────────────
   aiCard: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#024FE9',
     borderRadius: 20,
     padding: 16,
   },
@@ -520,6 +540,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+    marginHorizontal: -8,
+    marginBottom: -8,
   },
   aiCardText: {
     fontFamily: FONTS.regular,
@@ -551,14 +573,14 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   calorieGoalText: {
-    fontFamily: FONTS.extraBold,
+    fontFamily: FONTS.bold,
     fontSize: 20,
     color: '#fff',
   },
   calorieUnit: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: '#888',
+    color: '#fff',
   },
   calorieBar: {
     flexDirection: 'row',
@@ -566,6 +588,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     height: 72,
+    marginHorizontal: -6,
+    marginBottom: -6,
+    padding: 2
   },
   calorieProgress: {
     backgroundColor: '#FF3E00',
@@ -603,39 +628,55 @@ const styles = StyleSheet.create({
   nutritionGrid: { gap: 10 },
   nutritionRow: {
     flexDirection: 'row',
-    gap: 10,
-    alignItems: 'stretch',
+    gap: GRID_GAP,
   },
   nutritionCard: {
-    flex: 1,
+    width: NUTRITION_COL_WIDTH,   // explicit — same in both rows regardless of sibling count
     backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 12,
+    height: 120,
   },
   nutritionCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   nutritionLabel: {
     fontFamily: FONTS.bold,
-    fontSize: 13,
+    fontSize: 14,
     color: '#fff',
   },
   nutritionGoal: {
-    fontFamily: FONTS.regular,
-    fontSize: 11,
-    color: '#888',
+    fontFamily: FONTS.bold,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
-  nutritionUnit: { fontSize: 10 },
-  nutritionBox: {
+  nutritionUnit: { 
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+  },
+  // Vertical progress bar — mirrors calorieBar but vertical
+  nutritionBar: {
+    flex: 1,
+    backgroundColor: '#fff',
     borderRadius: 10,
-    paddingVertical: 16,
+    overflow: 'hidden',
+    flexDirection: 'column', // top = remaining, bottom = filled
+    marginHorizontal: -4,
+    marginBottom: -4,
+    padding: 1
+  },
+  nutritionBarRemaining: {
+    // top portion — white (already from container bg)
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  nutritionBarFill: {
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    minHeight: 80,
   },
   nutritionValue: {
     fontFamily: FONTS.extraBold,
@@ -646,18 +687,25 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 14,
   },
-  addButton: {
-    flex: 1,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 16,
+  // Wrapper so the circle button sits centered within the grid cell
+  addButtonWrapper: {
+    width: NUTRITION_COL_WIDTH,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
+  },
+  addButton: {
+    width: 74,
+    height: 74,
+    borderRadius: 50,
+    backgroundColor: '#D9D9D9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButtonText: {
-    fontSize: 36,
-    color: '#888',
-    fontFamily: FONTS.regular,
+    fontSize: 50,
+    color: '#FFFFFF',
+    fontFamily: FONTS.bold,
   },
 
   // ── Dark Cards ────────────────────────────────────────────────────
@@ -671,12 +719,12 @@ const styles = StyleSheet.create({
   darkCardLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   darkCardLabel: {
     fontFamily: FONTS.bold,
-    fontSize: 14,
-    color: '#888',
+    fontSize: 16,
+    color: '#fff',
   },
 
   pencapaianCard: {},
@@ -701,13 +749,13 @@ const styles = StyleSheet.create({
   },
   pencapaianHighlight: {
     fontFamily: FONTS.extraBold,
-    fontSize: 32,
+    fontSize: 36,
     color: '#FF3E00',
   },
   pencapaianDescription: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: '#FF3E00',
+    color: '#fff',
   },
 
   dietCard: { marginTop: 10 },
@@ -722,7 +770,7 @@ const styles = StyleSheet.create({
   },
   dietValue: {
     fontFamily: FONTS.extraBold,
-    fontSize: 48,
+    fontSize: 60,
     color: '#fff',
   },
   dietDescription: {
@@ -741,14 +789,16 @@ const styles = StyleSheet.create({
   },
   favoritLabel: {
     fontFamily: FONTS.extraBold,
-    fontSize: 28,
+    fontSize: 32,
     color: '#fff',
     marginBottom: 8,
+    textAlign:'center',
   },
   favoritDescription: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: 16,
     color: '#fff',
+    textAlign:'center',
   },
 
   // ── Navbar ────────────────────────────────────────────────────────
