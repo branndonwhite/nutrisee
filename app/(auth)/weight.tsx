@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
@@ -11,11 +11,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
+import { updateWeight } from "../../api/client";
+import { BackArrowIcon } from "@/assets/images/icon";
 
 const MIN_WEIGHT = 20;
 const MAX_WEIGHT = 155;
@@ -25,20 +29,35 @@ const RADIUS = SCREEN_WIDTH * 0.7;
 const CENTER_X = SCREEN_WIDTH / 2;
 const CENTER_Y = RADIUS * 1.1;
 const DEG_PER_KG = 2.4;
-const SVG_PADDING_TOP = 30; // space for labels above arc
+const SVG_PADDING_TOP = 30;
 
 export default function WeightScreen() {
   const router = useRouter();
   const { setData } = useRegister();
 
+  // mode = 'register' (default) | 'update'
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isUpdate = mode === "update";
+
   const [weight, setWeight] = useState(70);
   const [inputText, setInputText] = useState("70");
-  const angleRef = useRef(0); // 0 = center = 70kg
+  const [loading, setLoading] = useState(false);
+  const angleRef = useRef(0);
   const lastXRef = useRef(0);
   const velocityRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
   const currentAngleRef = useRef(0);
 
+  // ── Today's date (for update mode) ──────────────────────────────
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  // ── Scale logic (unchanged) ──────────────────────────────────────
   const clamp = (val: number) =>
     Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, val));
 
@@ -106,11 +125,25 @@ export default function WeightScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  // ── Submit handlers ──────────────────────────────────────────────
+  const handleRegisterSubmit = () => {
     setData({ weight });
     router.push("/(auth)/height");
   };
 
+  const handleUpdateSubmit = async () => {
+    setLoading(true);
+    try {
+      await updateWeight({ weight });
+      router.back();
+    } catch (e) {
+      console.error("Failed to update weight", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Ticks (unchanged) ────────────────────────────────────────────
   const renderTicks = () => {
     const ticks = [];
     const visibleRange = 30;
@@ -126,7 +159,6 @@ export default function WeightScreen() {
       const isCenter = kg === weight;
       const isLabel = kg % 5 === 0;
 
-      // 3 levels of tick length
       const tickLength = isCenter ? 180 : isTen ? 44 : isFive ? 28 : 14;
 
       const outerX = CENTER_X + RADIUS * Math.sin(angleRad);
@@ -135,13 +167,11 @@ export default function WeightScreen() {
       const innerY =
         CENTER_Y - (RADIUS - tickLength) * Math.cos(angleRad) + SVG_PADDING_TOP;
 
-      // Label above outer edge
       const labelRadius = RADIUS + 28;
       const labelX = CENTER_X + labelRadius * Math.sin(angleRad);
       const labelY =
         CENTER_Y - labelRadius * Math.cos(angleRad) + SVG_PADDING_TOP;
 
-      // Relaxed visibility — only clip if truly off screen
       const isLabelVisible =
         labelY > 0 &&
         labelY < SCALE_HEIGHT + SVG_PADDING_TOP &&
@@ -178,31 +208,51 @@ export default function WeightScreen() {
     return ticks;
   };
 
+  // ── Render ───────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Yuk berkenalan</Text>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>dengan </Text>
-          <Image
-            source={require("../../assets/images/branding/LOGO_Text_Colored.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        <Text style={styles.subtitle}>
-          Data yang kamu input akan mempengaruhi pengalaman{"\n"}
-          penggunaan aplikasi Nutrisee yang lebih optimal.
-        </Text>
-      </View>
+      {isUpdate && <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />}
 
-      {/* Weight Card */}
+      {/* ── Header: different for each mode ── */}
+      {isUpdate ? (
+        <View style={styles.updateHeader}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <BackArrowIcon width={10} height={10} fill="#000" />
+          </TouchableOpacity>
+          <Text style={styles.updateTitle}>Update Berat Badan</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      ) : (
+        <View style={styles.header}>
+          <Text style={styles.title}>Yuk berkenalan</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>dengan </Text>
+            <Image
+              source={require("../../assets/images/branding/LOGO_Text_Colored.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.subtitle}>
+            Data yang kamu input akan mempengaruhi pengalaman{"\n"}
+            penggunaan aplikasi Nutrisee yang lebih optimal.
+          </Text>
+        </View>
+      )}
+
+      {/* ── Date subtitle (update mode only) ── */}
+      {isUpdate && (
+        <Text style={styles.dateText}>{dateStr}</Text>
+      )}
+
+      {/* ── Weight Card: label changes per mode ── */}
       <View style={styles.weightCard}>
-        <Text style={styles.weightCardTitle}>Berat Badan</Text>
+        <Text style={styles.weightCardTitle}>
+          {isUpdate ? "Berat Badan Terbaru" : "Berat Badan"}
+        </Text>
         <View style={styles.weightDisplay}>
           <TextInput
             style={styles.weightInput}
@@ -216,26 +266,40 @@ export default function WeightScreen() {
         </View>
       </View>
 
-      {/* Indicator arrow — fixed position */}
+      {/* ── Indicator arrow ── */}
       <View style={styles.indicatorContainer}>
         <View style={styles.indicatorArrow} />
       </View>
 
-      {/* Curved Scale */}
+      {/* ── Curved Scale ── */}
       <View style={styles.scaleContainer} {...panResponder.panHandlers}>
         <Svg width={SCREEN_WIDTH} height={SCALE_HEIGHT + SVG_PADDING_TOP}>
           {renderTicks()}
         </Svg>
       </View>
 
-      {/* Bottom section — normal flow */}
+      {/* ── Bottom section: different button per mode ── */}
       <View style={styles.bottomSection}>
-        {/* Next Button */}
-        <TouchableOpacity style={styles.nextButton} onPress={() => router.push("/(auth)/height")}>
-          <Text style={styles.nextButtonText}>›</Text>
-        </TouchableOpacity>
+        {isUpdate ? (
+          <TouchableOpacity
+            style={[styles.updateButton, loading && styles.updateButtonDisabled]}
+            onPress={handleUpdateSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.updateButtonText}>
+              {loading ? "Menyimpan..." : "Perbarui"}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={handleRegisterSubmit}
+          >
+            <Text style={styles.nextButtonText}>›</Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Footer */}
         <Text style={styles.footerNote}>
           Nutrisee berkomitmen untuk menggunakan data pribadi{"\n"}
           anda hanya untuk kebutuhan fungsional aplikasi.
@@ -252,6 +316,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 80,
   },
+
+  // ── Register header ──────────────────────────────────────────────
   header: {
     alignItems: "center",
     marginBottom: 28,
@@ -279,6 +345,46 @@ const styles = StyleSheet.create({
     marginTop: 10,
     lineHeight: 20,
   },
+
+  // ── Update header ────────────────────────────────────────────────
+  updateHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+    paddingTop: Platform.OS === "android" ? 12 : 0,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 7,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    marginLeft: 2
+  },
+  updateTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: FONTS.bold,
+    fontSize: 20,
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  headerSpacer: { width: 40 },
+  dateText: {
+    textAlign: "center",
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: "#888888",
+    marginBottom: 20,
+  },
+
+  // ── Weight card ──────────────────────────────────────────────────
   weightCard: {
     backgroundColor: "#FF3E00",
     borderRadius: 20,
@@ -319,6 +425,8 @@ const styles = StyleSheet.create({
     marginBottom: 26,
     marginLeft: -4,
   },
+
+  // ── Scale ────────────────────────────────────────────────────────
   scaleContainer: {
     height: SCALE_HEIGHT + SVG_PADDING_TOP,
     position: "absolute",
@@ -346,15 +454,13 @@ const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderTopColor: "#FF3E00",
   },
-  scaleSvg: {
-    position: "absolute",
-    top: 0,
-  },
+
+  // ── Bottom section ───────────────────────────────────────────────
   bottomSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 34,
     paddingTop: 8,
-    marginTop: 'auto',   // pushes to bottom of screen
+    marginTop: "auto",
   },
   nextButton: {
     backgroundColor: COLORS.primary,
@@ -370,6 +476,29 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 28,
     fontFamily: FONTS.semiBold,
+  },
+  updateButton: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 32,
+    paddingVertical: 18,
+    paddingHorizontal: 80,
+    alignItems: "center",
+    marginBottom: 40,
+    zIndex: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  updateButtonDisabled: {
+    backgroundColor: "#555555",
+  },
+  updateButtonText: {
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
   footerNote: {
     fontFamily: FONTS.regular,

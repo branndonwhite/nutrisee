@@ -1,10 +1,15 @@
 import { useFonts } from 'expo-font';
-import { 
-  RethinkSans_400Regular, 
-  RethinkSans_500Medium, 
+import {
+  RethinkSans_400Regular,
+  RethinkSans_400Regular_Italic,
+  RethinkSans_500Medium,
+  RethinkSans_500Medium_Italic,
   RethinkSans_600SemiBold,
+  RethinkSans_600SemiBold_Italic,
   RethinkSans_700Bold,
-  RethinkSans_800ExtraBold
+  RethinkSans_700Bold_Italic,
+  RethinkSans_800ExtraBold,
+  RethinkSans_800ExtraBold_Italic,
 } from '@expo-google-fonts/rethink-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -16,10 +21,15 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     RethinkSans_400Regular,
+    RethinkSans_400Regular_Italic,
     RethinkSans_500Medium,
+    RethinkSans_500Medium_Italic,
     RethinkSans_600SemiBold,
+    RethinkSans_600SemiBold_Italic,
     RethinkSans_700Bold,
+    RethinkSans_700Bold_Italic,
     RethinkSans_800ExtraBold,
+    RethinkSans_800ExtraBold_Italic,
   });
 
   useEffect(() => {
