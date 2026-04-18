@@ -14,3 +14,6 @@ client.interceptors.request.use(async (config) => {
 });
 
 export default client;
+
+export const updateWeight = (data: { weight: number }) =>
+  client.put('/profile/weight', data);

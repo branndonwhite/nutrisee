@@ -1,4 +1,4 @@
-export { default as BackArrowIcon } from './Back Arrow.svg';
+export { default as BackArrowIcon } from './BackArrowIcon';
 export { default as AchievementIcon } from './DB_Achievement.svg';
 export { default as AIOverviewIcon } from './DB_AIOverview.svg';
 export { default as CalorieIcon } from './DB_Calorie.svg';

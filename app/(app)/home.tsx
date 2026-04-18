@@ -379,7 +379,10 @@ export default function HomeScreen() {
         androidFallbackColor="rgba(245,245,245,0.95)"
         gradientDirection="footer"
       >
-        <TouchableOpacity style={styles.updateWeightButton}>
+        <TouchableOpacity 
+          style={styles.updateWeightButton}
+          onPress={() => router.push('/(auth)/weight?mode=update')}  
+        >
           <View style={styles.updateWeightInner}>
             <UpdateIcon width={26} height={26} />
           </View>
@@ -439,7 +442,7 @@ export default function HomeScreen() {
                   router.push('/(app)/nutriscan-camera');
                 }}
               >
-                <NutriscanIcon width={40} height={40} fill="#000" stroke="#000" />
+                <NutriscanIcon width={40} height={40} fill="#000" />
                 <Text style={styles.modalOptionLabel}>Ambil Gambar</Text>
                 <Text style={styles.modalOptionDesc}>
                   Cek nutrisi makananmu{'\n'}menggunakan NutriSEE{'\n'}AI Image Recognition.
