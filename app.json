@@ -41,7 +41,14 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker", 
+        {
+          "photosPermission": "Allow Nutrisee to access your photos.",
+          "cameraPermission": "Allow Nutrisee to take photos of your meals."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
