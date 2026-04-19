@@ -28,18 +28,20 @@ export default function BlurContainer({
     );
   }
 
-  // Android — use gradient fade
+  // Derive base RGB from tint or androidFallbackColor
+  const base = tint === 'dark' ? '0,0,0' : '245,245,245';
+
   if (gradientDirection === 'header') {
     return (
       <LinearGradient
         colors={[
-          'rgba(245,245,245,1.0)',   // fully solid at top
-          'rgba(245,245,245,0.98)',
-          'rgba(245,245,245,0.95)',
-          'rgba(245,245,245,0.85)',
-          'rgba(245,245,245,0.6)',
-          'rgba(245,245,245,0.2)',
-          'rgba(245,245,245,0.0)',   // fully transparent at bottom
+          `rgba(${base},1.0)`,
+          `rgba(${base},0.98)`,
+          `rgba(${base},0.95)`,
+          `rgba(${base},0.85)`,
+          `rgba(${base},0.6)`,
+          `rgba(${base},0.2)`,
+          `rgba(${base},0.0)`,
         ]}
         locations={[0, 0.2, 0.4, 0.6, 0.75, 0.9, 1]}
         style={style}
@@ -53,13 +55,13 @@ export default function BlurContainer({
     return (
       <LinearGradient
         colors={[
-          'rgba(245,245,245,0.0)',   // fully transparent at top
-          'rgba(245,245,245,0.2)',
-          'rgba(245,245,245,0.6)',
-          'rgba(245,245,245,0.85)',
-          'rgba(245,245,245,0.95)',
-          'rgba(245,245,245,0.98)',
-          'rgba(245,245,245,1.0)',   // fully solid at bottom
+          `rgba(${base},0.0)`,
+          `rgba(${base},0.2)`,
+          `rgba(${base},0.6)`,
+          `rgba(${base},0.85)`,
+          `rgba(${base},0.95)`,
+          `rgba(${base},0.98)`,
+          `rgba(${base},1.0)`,
         ]}
         locations={[0, 0.1, 0.25, 0.4, 0.6, 0.8, 1]}
         style={style}
@@ -69,7 +71,6 @@ export default function BlurContainer({
     );
   }
 
-  // Default fallback
   return (
     <View style={[style, { backgroundColor: androidFallbackColor }]}>
       {children}

@@ -48,6 +48,12 @@
           "photosPermission": "Allow Nutrisee to access your photos.",
           "cameraPermission": "Allow Nutrisee to take photos of your meals."
         }
+      ],
+      [
+        "expo-camera", 
+        {
+          "cameraPermission": "Allow Nutrisee to access your camera to scan meals."
+        }
       ]
     ],
     "experiments": {

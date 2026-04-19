@@ -44,8 +44,11 @@ export default function ScanResultScreen() {
   const params = useLocalSearchParams();
 
   // TODO: replace with real API result
-  // const parsed = params.data ? JSON.parse(params.data as string) : null;
-  const result: NutritionResult = DUMMY_RESULT;
+  const passed = params.data ? JSON.parse(params.data as string) : {};
+  const result: NutritionResult = {
+    ...DUMMY_RESULT,
+    imageUri: passed.imageUri ?? DUMMY_RESULT.imageUri,
+  };
 
   const hasImage = !!result.imageUri;
 
@@ -320,11 +323,15 @@ const styles = StyleSheet.create({
     backgroundColor: BLUE,
     borderRadius: 20,
     overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    minHeight: 320
   },
   foodImage: {
     width: '100%',
-    height: 220,
+    height: 260,
     resizeMode: 'cover',
+    borderRadius: 12,
   },
   imageCardFooter: {
     flexDirection: 'row',
