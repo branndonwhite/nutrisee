@@ -17,5 +17,5 @@ export { default as MaleIcon } from './OV_Male.svg';
 export { default as NotesIcon } from './OV_Notes.svg';
 export { default as ShareIcon } from './OV_Share.svg';
 export { default as WeightIcon } from './OV_Weight.svg';
-export { default as GalleryIcon } from './TS_Gallery.svg';
+export { default as GalleryIcon } from './GalleryIcon';
 export { default as MascotIcon } from './TS_Mascot.svg';
