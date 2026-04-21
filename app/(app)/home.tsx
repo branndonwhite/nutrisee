@@ -397,7 +397,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => router.push('/(app)/profile')}
+        >
           <View style={styles.profileInner}>
             {DUMMY.gender === 'male'
               ? <MaleIcon width={26} height={26} />
