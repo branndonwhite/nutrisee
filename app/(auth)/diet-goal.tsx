@@ -7,13 +7,11 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import { useRegister } from '../../context/RegisterContext';
-import { register, completeProfile } from '../../api/auth';
 
 const DIET_GOALS = [
   { id: 'lose_weight', label: 'Menurunkan Berat Badan' },
@@ -23,36 +21,14 @@ const DIET_GOALS = [
 
 export default function DietGoalScreen() {
   const router = useRouter();
-  const { data, clearData } = useRegister();
+  const { setData } = useRegister(); // ✅ added setData, removed unused data/clearData
   const [selected, setSelected] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!selected) return;
-
-    try {
-        setLoading(true);
-
-        await register(data.email!, data.password!);
-
-        await completeProfile({
-        nickname: data.nickname!,
-        gender: data.gender!,
-        date_of_birth: data.date_of_birth!,
-        height: data.height!,
-        weight: data.weight!,
-        activity_level: data.activity_level!,
-        diet_goal: selected,    // send selected diet goal
-        });
-
-        clearData();
-        router.replace('/(app)/home');
-    } catch (err: any) {
-        Alert.alert('Error', err.response?.data?.error || 'Terjadi kesalahan');
-    } finally {
-        setLoading(false);
-    }
-    };
+    setData({ diet_goal: selected });
+    router.push('/(auth)/weight?mode=register-goal');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -83,17 +59,11 @@ export default function DietGoalScreen() {
           {DIET_GOALS.map((goal) => (
             <TouchableOpacity
               key={goal.id}
-              style={[
-                styles.option,
-                selected === goal.id && styles.optionSelected,
-              ]}
+              style={[styles.option, selected === goal.id && styles.optionSelected]}
               onPress={() => setSelected(goal.id)}
               activeOpacity={0.8}
             >
-              <Text style={[
-                styles.optionLabel,
-                selected === goal.id && styles.optionLabelSelected,
-              ]}>
+              <Text style={[styles.optionLabel, selected === goal.id && styles.optionLabelSelected]}>
                 {goal.label}
               </Text>
             </TouchableOpacity>
@@ -104,9 +74,9 @@ export default function DietGoalScreen() {
       {/* Bottom section */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
-          style={[styles.nextButton, (!selected || loading) && styles.nextButtonDisabled]}
-          onPress={() => router.push("/(app)/home")}
-          disabled={!selected || loading}
+          style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={!selected}
         >
           <Text style={styles.nextButtonText}>›</Text>
         </TouchableOpacity>
@@ -158,12 +128,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 24,
+    paddingBottom: 12,
   },
   cardTitle: {
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.boldItalic,
     fontSize: 20,
     color: '#fff',
-    fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -175,6 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 24,
     paddingHorizontal: 16,
+    marginHorizontal: -8,
     alignItems: 'center',
     justifyContent: 'center',
   },

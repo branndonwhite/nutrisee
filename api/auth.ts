@@ -16,6 +16,7 @@ export const completeProfile = async (data: {
   weight: number;
   activity_level: string;
   diet_goal: string;
+  weight_goal: number;
 }) => {
   const response = await client.post('/auth/profile', data);
   return response.data.profile;

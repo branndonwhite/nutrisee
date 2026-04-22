@@ -198,7 +198,7 @@ export default function ScanResultScreen() {
           <TouchableOpacity
             style={styles.submitButton}
             activeOpacity={0.85}
-            onPress={() => router.replace('/(app)/scan-success')}
+            onPress={() => router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home')}
           >
             <Text style={styles.submitButtonText}>SUBMIT</Text>
           </TouchableOpacity>

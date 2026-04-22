@@ -308,11 +308,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   nicknameCardTitle: {
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.boldItalic,
     fontSize: 22,
     color: '#fff',
-    fontStyle: 'italic',
-    fontWeight: 'bold'
   },
   nicknameInput: {
     backgroundColor: '#fff',
@@ -344,10 +342,9 @@ const styles = StyleSheet.create({
     minWidth: 162,
   },
   fieldLabel: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.semiBoldItalic,
     fontSize: 18,
     color: '#fff',
-    fontStyle: 'italic',
   },
   fieldValueContainer: {
     flex: 1,
