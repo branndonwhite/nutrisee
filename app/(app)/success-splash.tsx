@@ -6,22 +6,29 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { NIcon } from '../../assets/images/icon';
 import { FONTS } from '../../constants/fonts';
 
 const DARK_RED = '#7B1A0E';
 const WHITE = '#FFFFFF';
 const LOGO_RED = '#C0391E';
-const DISPLAY_DURATION = 2200; // ms before navigating home
+const DISPLAY_DURATION = 2200;
 
-export default function ScanSuccessScreen() {
+export default function SuccessSplashScreen() {
+  const { message, dest } = useLocalSearchParams<{
+    message?: string;
+    dest?: string;
+  }>();
+
+  const displayMessage = message ?? 'Berhasil!';
+  const destination = dest ?? '/(app)/home';
+
   const scaleAnim = useRef(new Animated.Value(0.7)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const textFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -43,9 +50,8 @@ export default function ScanSuccessScreen() {
       }),
     ]).start();
 
-    // Auto-navigate home after display duration
     const timer = setTimeout(() => {
-      router.replace('/(app)/home');
+      router.replace(destination as any);
     }, DISPLAY_DURATION);
 
     return () => clearTimeout(timer);
@@ -54,7 +60,7 @@ export default function ScanSuccessScreen() {
   return (
     <View style={styles.container}>
       <Animated.Text style={[styles.successText, { opacity: textFadeAnim }]}>
-        Sukses mencatat{'\n'}makananmu!
+        {displayMessage}
       </Animated.Text>
 
       <Animated.View

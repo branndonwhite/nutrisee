@@ -10,6 +10,7 @@ type RegisterData = {
   weight: number;
   activity_level: string;
   diet_goal: string;
+  weight_goal: number;
 };
 
 type RegisterContextType = {

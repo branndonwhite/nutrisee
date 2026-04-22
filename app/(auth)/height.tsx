@@ -275,10 +275,9 @@ const styles = StyleSheet.create({
     width: 220,
   },
   heightCardTitle: {
-    fontFamily: FONTS.bold,
+    fontFamily: FONTS.boldItalic,
     fontSize: 22,
     color: '#fff',
-    fontStyle: 'italic',
     marginBottom: 8,
     paddingHorizontal: 8,
     textAlign: 'center',
