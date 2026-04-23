@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import { useRegister } from '../../context/RegisterContext';
+import { NextArrowIcon } from '@/assets/images/icon';
 
 const ACTIVITY_LEVELS = [
   {
@@ -114,7 +115,7 @@ export default function ActivityLevelScreen() {
           onPress={() => router.push("/(auth)/diet-goal")}
           disabled={!selected}
         >
-          <Text style={styles.nextButtonText}>›</Text>
+          <NextArrowIcon width={20} height={20} />
         </TouchableOpacity>
         <Text style={styles.footerNote}>
           Nutrisee berkomitmen untuk menggunakan data pribadi{'\n'}
@@ -165,6 +166,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 12,
     marginHorizontal: 24,
+    marginBottom: 6,
   },
   cardTitle: {
     fontFamily: FONTS.boldItalic,
@@ -232,11 +234,6 @@ const styles = StyleSheet.create({
   },
   nextButtonDisabled: {
     opacity: 0.4,
-  },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontFamily: FONTS.semiBold,
   },
   footerNote: {
     fontFamily: FONTS.regular,

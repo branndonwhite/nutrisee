@@ -128,7 +128,7 @@ export default function ScanTextScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <BackArrowIcon width={20} height={20} fill={BLACK} />
+          <BackArrowIcon width={10} height={15} fill={BLACK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NutriSCAN</Text>
         <View style={styles.headerSpacer} />

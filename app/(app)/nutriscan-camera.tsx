@@ -144,7 +144,7 @@ export default function NutriScanCameraScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <BackArrowIcon width={20} height={20} fill={WHITE} />
+            <BackArrowIcon width={10} height={15} fill={WHITE} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>NutriSCAN</Text>
           <View style={styles.headerSpacer} />

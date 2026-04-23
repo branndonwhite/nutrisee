@@ -16,7 +16,7 @@ import {
   Alert,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
-import { BackArrowIcon } from '../../assets/images/icon';
+import { BackArrowIcon, NextArrowIcon } from '../../assets/images/icon';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
@@ -332,7 +332,7 @@ export default function WeightScreen() {
       )}
 
       {/* Weight Card */}
-      <View style={styles.weightCard}>
+      <View style={[styles.weightCard, isUpdate && styles.weightCardUpdate]}>
 
         {/* Tab switcher — update mode only */}
         {isUpdate ? (
@@ -395,7 +395,7 @@ export default function WeightScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.nextButton} onPress={handleRegisterSubmit}>
-            <Text style={styles.nextButtonText}>›</Text>
+            <NextArrowIcon width={20} height={20} />
           </TouchableOpacity>
         )}
 
@@ -483,7 +483,10 @@ const styles = StyleSheet.create({
   // Weight card
   weightCard: {
     backgroundColor: "#FF3E00", borderRadius: 20,
-    padding: 10, marginBottom: 12, marginTop: 30,
+    padding: 10, marginBottom: 12, 
+  },
+  weightCardUpdate: {
+    marginTop: 20,
   },
   weightCardTitle: {
     fontFamily: FONTS.boldItalic, fontSize: 18, color: "#fff",
@@ -547,7 +550,6 @@ const styles = StyleSheet.create({
     borderRadius: 20, alignItems: "center", justifyContent: "center",
     marginBottom: 40, zIndex: 20,
   },
-  nextButtonText: { color: "#fff", fontSize: 28, fontFamily: FONTS.semiBold },
   updateButton: {
     backgroundColor: "#1A1A1A", borderRadius: 20,
     paddingVertical: 18, paddingHorizontal: 80,
