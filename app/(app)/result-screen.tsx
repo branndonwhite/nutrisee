@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,11 @@ import {
   Animated,
   ScrollView,
   Platform,
+  FlatList
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, LocationIcon } from '../../assets/images/icon';
-import { blue } from 'react-native-reanimated/lib/typescript/Colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BLUE = '#014FE9';
@@ -29,6 +29,13 @@ interface NutritionResult {
   carbs: number;
   protein: number;
   fat: number;
+  sugar: number;        // gr
+  fiber: number;        // gr
+  calcium: number;      // mg
+  cholesterol: number;  // mg
+  vitaminA: number;     // mcg
+  vitaminC: number;     // mg
+  vitaminD: number;     // mcg
   description?: string; // only for text mode
   imageUri?: string;    // only for image mode
   location: string;
@@ -40,7 +47,7 @@ interface NutritionResult {
 }
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
-export default function ScanResultScreen() {
+export default function Scanreen() {
   const params = useLocalSearchParams();
 
   // TODO: replace with real API result
@@ -49,12 +56,36 @@ export default function ScanResultScreen() {
     ...DUMMY_RESULT,
     imageUri: passed.imageUri ?? DUMMY_RESULT.imageUri,
   };
-
+  const isViewOnly = params.viewMode === 'profile';
+  const [macroPage, setMacroPage] = useState(0);
+  const macroFlatListRef = useRef<FlatList>(null);
+  const [macroCardWidth, setMacroCardWidth] = useState(0);
   const hasImage = !!result.imageUri;
 
   // Stagger entrance animations
   const fadeAnims = Array.from({ length: 5 }, () => useRef(new Animated.Value(0)).current);
   const slideAnims = Array.from({ length: 5 }, () => useRef(new Animated.Value(24)).current);
+
+  const getMacroPages = (r: NutritionResult) => [
+    [
+      { label: 'Karbohidrat', value: r.carbs, unit: 'gr' },
+      { label: 'Protein', value: r.protein, unit: 'gr' },
+      { label: 'Lemak', value: r.fat, unit: 'gr' },
+    ],
+    [
+      { label: 'Gula', value: r.sugar, unit: 'gr' },
+      { label: 'Serat', value: r.fiber, unit: 'gr' },
+      { label: 'Kalsium', value: r.calcium, unit: 'mg' },
+    ],
+    [
+      { label: 'Kolesterol', value: r.cholesterol, unit: 'mg' },
+      { label: 'Vitamin A', value: r.vitaminA, unit: 'μg' },
+    ],
+    [
+      { label: 'Vitamin C', value: r.vitaminC, unit: 'mg' },
+      { label: 'Vitamin D', value: r.vitaminD, unit: 'μg' },
+    ],
+  ];
 
   useEffect(() => {
     const animations = fadeAnims.map((fade, i) =>
@@ -89,7 +120,7 @@ export default function ScanResultScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <BackArrowIcon width={20} height={20} fill={BLACK} />
+          <BackArrowIcon width={10} height={15} fill={BLACK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NutriSCAN</Text>
         <View style={styles.headerSpacer} />
@@ -136,28 +167,44 @@ export default function ScanResultScreen() {
           )}
         </Animated.View>
 
-        {/* ── Card 2: Macros ── */}
-        <Animated.View style={[styles.macrosRow, animatedStyle(1)]}>
-          <View style={styles.macroCard}>
-            <Text style={styles.macroValue}>
-              {result.carbs}
-              <Text style={styles.macroUnit}>gr</Text>
-            </Text>
-            <Text style={styles.macroLabel}>Karbohidrat</Text>
-          </View>
-          <View style={styles.macroCard}>
-            <Text style={styles.macroValue}>
-              {result.protein}
-              <Text style={styles.macroUnit}>gr</Text>
-            </Text>
-            <Text style={styles.macroLabel}>Protein</Text>
-          </View>
-          <View style={styles.macroCard}>
-            <Text style={styles.macroValue}>
-              {result.fat}
-              <Text style={styles.macroUnit}>gr</Text>
-            </Text>
-            <Text style={styles.macroLabel}>Lemak</Text>
+        {/* ── Card 2: Macros (swipeable) ── */}
+        <Animated.View style={[animatedStyle(1)]}>
+          <FlatList
+            ref={macroFlatListRef}
+            data={getMacroPages(result)}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, i) => String(i)}
+            snapToInterval={macroCardWidth + 12}
+            decelerationRate="fast"
+            contentContainerStyle={{ gap: 12 }}
+            onLayout={(e) => setMacroCardWidth(e.nativeEvent.layout.width)}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(
+                e.nativeEvent.contentOffset.x / (macroCardWidth + 12)
+              );
+              setMacroPage(index);
+            }}
+            renderItem={({ item: page }) => (
+              <View style={[styles.macrosRow, { width: macroCardWidth }]}>
+                {page.map((macro) => (
+                  <View key={macro.label} style={[styles.macroCard, { flex: 1 }]}>
+                    <Text style={styles.macroValue}>
+                      {macro.value}
+                      <Text style={styles.macroUnit}>{macro.unit}</Text>
+                    </Text>
+                    <Text style={styles.macroLabel}>{macro.label}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          />
+          {/* Pagination dots */}
+          <View style={styles.macroDots}>
+            {getMacroPages(result).map((_, i) => (
+              <View key={i} style={[styles.macroDot, i === macroPage && styles.macroDotActive]} />
+            ))}
           </View>
         </Animated.View>
 
@@ -180,30 +227,31 @@ export default function ScanResultScreen() {
         </Animated.View>
 
         {/* ── Card 4: Calorie Progress + Submit ── */}
-        <Animated.View style={[styles.submitCard, animatedStyle(3)]}>
-          <View style={styles.submitLeft}>
-            <Text style={styles.submitLabel}>Progress Kalori Hari Ini</Text>
-            {/* Progress bar */}
-            <View style={styles.progressBarTrack}>
-              <View style={[styles.progressBarFill, { flex: calorieProgress }]}>
-                <Text style={styles.progressConsumed}>
-                  {result.caloriesConsumed} 
-                  <Text style={styles.progressGoal}> / {result.calorieGoal}kkal</Text>
-                </Text>
+        {!isViewOnly && (
+          <Animated.View style={[styles.submitCard, animatedStyle(3)]}>
+            <View style={styles.submitLeft}>
+              <Text style={styles.submitLabel}>Progress Kalori Hari Ini</Text>
+              {/* Progress bar */}
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { flex: calorieProgress }]}>
+                  <Text style={styles.progressConsumed}>
+                    {result.caloriesConsumed} 
+                    <Text style={styles.progressGoal}> / {result.calorieGoal}kkal</Text>
+                  </Text>
+                </View>
+                <View style={{ flex: 1 - calorieProgress }} />
               </View>
-              <View style={{ flex: 1 - calorieProgress }} />
             </View>
-          </View>
 
-          <TouchableOpacity
-            style={styles.submitButton}
-            activeOpacity={0.85}
-            onPress={() => router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home')}
-          >
-            <Text style={styles.submitButtonText}>SUBMIT</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
+            <TouchableOpacity
+              style={styles.submitButton}
+              activeOpacity={0.85}
+              onPress={() => router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home')}
+            >
+              <Text style={styles.submitButtonText}>SUBMIT</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </ScrollView>
     </View>
   );
@@ -216,6 +264,13 @@ const DUMMY_RESULT: NutritionResult = {
   carbs: 70,
   protein: 25,
   fat: 25,
+  sugar: 8,
+  fiber: 3,
+  calcium: 45,
+  cholesterol: 72,
+  vitaminA: 120,
+  vitaminC: 5,
+  vitaminD: 2,
   description: 'Nasi goreng jawa dengan topping sosis, bla bla bla bla satu porsi',
   imageUri: undefined,
   location: 'Kemanggisan,\nDKI Jakarta.',
@@ -240,6 +295,7 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 16,
     paddingHorizontal: 16,
+    marginLeft: 2,
     backgroundColor: LIGHT_BG,
   },
   backButton: {
@@ -386,6 +442,21 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 13,
     color: WHITE,
+  },
+  macroDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  macroDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#CCCCCC',
+  },
+  macroDotActive: {
+    backgroundColor: BLUE,
   },
 
   // ── Meta row ──
