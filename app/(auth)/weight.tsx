@@ -16,12 +16,14 @@ import {
   Alert,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
+import { BackArrowIcon } from '../../assets/images/icon';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
 import { register, completeProfile } from "../../api/auth"; 
 import { updateWeight, updateWeightGoal } from "../../api/client";
 
+const HEADER_HEIGHT = 120;
 const MIN_WEIGHT = 20;
 const MAX_WEIGHT = 155;
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -292,22 +294,27 @@ export default function WeightScreen() {
   // ── Render ────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, isUpdate && styles.rootUpdate]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {isUpdate && <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />}
 
       {/* Header */}
       {isUpdate ? (
-        <View style={styles.updateHeader}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backChevron}>‹</Text>
+        // Update: absolute, home-mirrored height — back button + title + date
+        <View style={styles.headerUpdate}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <BackArrowIcon width={10} height={15} fill="#000" />
           </TouchableOpacity>
-          <Text style={styles.updateTitle}>Update Berat Badan</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.updateTitle}>Update Berat Badan</Text>
+            <Text style={styles.headerDate}>{dateStr}</Text>
+          </View>
           <View style={styles.headerSpacer} />
         </View>
       ) : (
-        <View style={styles.header}>
+        // Register: normal flow, original layout — logo + subtitle, no date
+        <View style={styles.headerRegister}>
           <Text style={styles.title}>Yuk berkenalan</Text>
           <View style={styles.titleRow}>
             <Text style={styles.title}>dengan </Text>
@@ -323,8 +330,6 @@ export default function WeightScreen() {
           </Text>
         </View>
       )}
-
-      {isUpdate && <Text style={styles.dateText}>{dateStr}</Text>}
 
       {/* Weight Card */}
       <View style={styles.weightCard}>
@@ -409,11 +414,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingTop: 80, // register mode — normal flow
+  },
+  rootUpdate: {
+    paddingTop: HEADER_HEIGHT, // update mode — offset for absolute header
   },
 
-  // Register header
-  header: { alignItems: "center", marginBottom: 28 },
+  // ── Update header: absolute, mirrors home.tsx geometry ────────────
+  headerUpdate: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: HEADER_HEIGHT,
+    paddingTop: 56,
+    paddingBottom: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    zIndex: 10,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerDate: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ── Register header: normal flow, original layout ─────────────────
+  headerRegister: {
+    alignItems: "center",
+    marginBottom: 28,
+  },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   title: { fontFamily: FONTS.semiBold, fontSize: 22, color: COLORS.text, textAlign: "center" },
   logo: { width: 110, height: 49 },
@@ -422,32 +458,32 @@ const styles = StyleSheet.create({
     textAlign: "center", marginTop: 10, lineHeight: 20,
   },
 
-  // Update header
-  updateHeader: {
-    flexDirection: "row", alignItems: "center", marginBottom: 4,
-    paddingTop: Platform.OS === "android" ? 12 : 0,
-  },
+  // Update header title
   backButton: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFFFFF",
-    alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 2,
+    marginLeft: 2,
   },
   backChevron: { fontSize: 28, color: "#1A1A1A", lineHeight: 32, marginTop: -2 },
   updateTitle: {
     flex: 1, textAlign: "center", fontFamily: FONTS.bold,
     fontSize: 20, color: COLORS.text, letterSpacing: -0.3,
   },
-  headerSpacer: { width: 40 },
-  dateText: {
-    textAlign: "center", fontFamily: FONTS.regular,
-    fontSize: 14, color: "#888888", marginBottom: 20,
-  },
+  headerSpacer: { width: 36 },
 
   // Weight card
   weightCard: {
     backgroundColor: "#FF3E00", borderRadius: 20,
-    padding: 10, marginBottom: 12,
+    padding: 10, marginBottom: 12, marginTop: 30,
   },
   weightCardTitle: {
     fontFamily: FONTS.boldItalic, fontSize: 18, color: "#fff",
@@ -513,11 +549,11 @@ const styles = StyleSheet.create({
   },
   nextButtonText: { color: "#fff", fontSize: 28, fontFamily: FONTS.semiBold },
   updateButton: {
-    backgroundColor: "#1A1A1A", borderRadius: 32,
+    backgroundColor: "#1A1A1A", borderRadius: 20,
     paddingVertical: 18, paddingHorizontal: 80,
     alignItems: "center", marginBottom: 40, zIndex: 20,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18, shadowRadius: 10, elevation: 5,
+    // shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.18, shadowRadius: 10, elevation: 5,
   },
   updateButtonDisabled: { backgroundColor: "#555555" },
   updateButtonText: {
