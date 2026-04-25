@@ -75,15 +75,15 @@ export default function Scanreen() {
     [
       { label: 'Gula', value: r.sugar, unit: 'gr' },
       { label: 'Serat', value: r.fiber, unit: 'gr' },
-      { label: 'Kalsium', value: r.calcium, unit: 'mg' },
     ],
     [
-      { label: 'Kolesterol', value: r.cholesterol, unit: 'mg' },
-      { label: 'Vitamin A', value: r.vitaminA, unit: 'μg' },
-    ],
-    [
+      { label: 'Vitamin A', value: r.vitaminA, unit: 'μg' },      
       { label: 'Vitamin C', value: r.vitaminC, unit: 'mg' },
       { label: 'Vitamin D', value: r.vitaminD, unit: 'μg' },
+    ],
+    [
+      { label: 'Kalsium', value: r.calcium, unit: 'mg' },
+      { label: 'Kolesterol', value: r.cholesterol, unit: 'mg' },
     ],
   ];
 

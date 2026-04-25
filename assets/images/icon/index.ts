@@ -19,3 +19,4 @@ export { default as ShareIcon } from './OV_Share.svg';
 export { default as WeightIcon } from './OV_Weight.svg';
 export { default as GalleryIcon } from './GalleryIcon';
 export { default as MascotIcon } from './TS_Mascot.svg';
+export { default as NextArrowIcon } from './Next Arrow Thin.svg';

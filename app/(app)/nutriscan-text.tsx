@@ -144,7 +144,7 @@ export default function ScanTextScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <BackArrowIcon width={20} height={20} fill={BLACK} />
+          <BackArrowIcon width={10} height={15} fill={BLACK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NutriSCAN</Text>
         <View style={styles.headerSpacer} />
@@ -225,42 +225,46 @@ export default function ScanTextScreen() {
         </View>
 
         {/* ── Fun Fact Card ── */}
-        <View 
+        <View
           style={styles.factCard}
-          onLayout={(e) => setFactCardWidth(e.nativeEvent.layout.width - 32 - GAP)}
+          onLayout={(e) => setFactCardWidth(e.nativeEvent.layout.width - 32)}
         >
           <Text style={styles.factTitle}>
             <Text style={styles.factTitleItalic}>Fun Fact!</Text>
           </Text>
-          <FlatList
-            ref={flatListRef}
-            data={FOOD_FACTS}
+
+          <ScrollView
             horizontal
-            pagingEnabled
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(_, i) => String(i)}
-            snapToInterval={factCardWidth + GAP}
             decelerationRate="fast"
-            contentContainerStyle={{ gap: GAP }}
+            snapToOffsets={FOOD_FACTS.map((_, i) => i * (factCardWidth + 12))}
+            snapToAlignment="start"
             onMomentumScrollEnd={(e) => {
               const index = Math.round(
-                e.nativeEvent.contentOffset.x / factCardWidth
+                e.nativeEvent.contentOffset.x / (factCardWidth + 12)
               );
               setFactIndex(index);
             }}
-            renderItem={({ item }) => (
-              <View style={[styles.factTextBox, { width: factCardWidth }]}>
-                <Text style={styles.factText}>{item}</Text>
-              </View>
-            )}
-          />
-          {/* Pagination dots */}
-          <View style={styles.dotsRow}>
-            {FOOD_FACTS.map((_, i) => (
+          >
+            {FOOD_FACTS.map((item, i) => (
               <View
                 key={i}
-                style={[styles.dot, i === factIndex && styles.dotActive]}
-              />
+                style={[
+                  styles.factTextBox,
+                  {
+                    width: factCardWidth,
+                    marginRight: i < FOOD_FACTS.length - 1 ? 12 : 0,
+                  },
+                ]}
+              >
+                <Text style={styles.factText}>{item}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.dotsRow}>
+            {FOOD_FACTS.map((_, i) => (
+              <View key={i} style={[styles.dot, i === factIndex && styles.dotActive]} />
             ))}
           </View>
         </View>

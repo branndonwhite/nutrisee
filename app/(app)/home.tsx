@@ -34,7 +34,6 @@ const CARD_GAP = 24;
 
 const DUMMY = {
   nickname: 'Martinus',
-  date: 'Jumat, 13 Februari 2025',
   gender: 'male',
   aiOverview: 'Hari Sabtu ya jalan-jalan,\nJalan-jalan ke Toko Jamu.\nJangan lupa makan sayuran,\ndan juga tambah lagi vitaminmu!\n\nPola makan kamu sudah tergolong baik! Pertahankan kebiasaan ini dan ikuti anjuran di atas secara konsisten untuk mencapai hasil kesehatan yang optimal ya sobat Nutrisee 😁.',
   calorieGoal: 2650,
@@ -46,9 +45,9 @@ const DUMMY = {
     gula: { consumed: 62, goal: 50 },
     serat: { consumed: 20, goal: 37 },
   },
-  pencapaian: { label: 'Defisit', value: '3000', unit: 'kkal', description: 'dalam 3 hari' },
-  diet: { value: '10kg', description: 'turun dalam 1 bulan.' },
-  favorit: { label: 'Raja Laut 🐟', description: 'Kamu mengonsumsi lebih \n dari 5 porsi Ikan \n dalam seminggu ini!' },
+  pencapaian: { label: 'Defisit', value: '3000', unit: 'kkal', days: '3 hari' },
+  diet: { value: '10', measurement: 'kg', month: '1 bulan.' },
+  favorit: { label: 'Raja Laut 🐟', portion: '5 porsi ikan' },
 };
 
 const TOTAL_CARDS = 3;
@@ -56,6 +55,10 @@ const TOTAL_CARDS = 3;
 export default function HomeScreen() {
   const router = useRouter();
   const [showScanModal, setShowScanModal] = useState(false);
+
+  const todayStr = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
 
   // Measured heights of each card
   const cardHeightsRef = useRef<number[]>([]);
@@ -287,7 +290,7 @@ export default function HomeScreen() {
           <View style={styles.addButtonWrapper}>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setShowScanModal(true)}
+              // onPress={() => setShowScanModal(true)}
             >
               <Text style={styles.addButtonText}>+</Text>
             </TouchableOpacity>
@@ -314,7 +317,7 @@ export default function HomeScreen() {
           <Text style={styles.pencapaianHighlight}>{DUMMY.pencapaian.value}</Text>
           {DUMMY.pencapaian.unit}
         </Text>
-        <Text style={styles.pencapaianDescription}>{DUMMY.pencapaian.description}</Text>
+        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{DUMMY.pencapaian.days}</Text></Text>
       </View>
 
       {/* Diet */}
@@ -324,8 +327,8 @@ export default function HomeScreen() {
           <DietIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Diet</Text>
         </View>
-        <Text style={styles.dietValue}>{DUMMY.diet.value}</Text>
-        <Text style={styles.dietDescription}>{DUMMY.diet.description}</Text>
+        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{DUMMY.diet.value}</Text>{DUMMY.diet.measurement}</Text>
+        <Text style={{color: '#fff'}}>Turun dalam <Text style={styles.dietDescription}>{DUMMY.diet.month}</Text></Text>
       </View>
 
       {/* Favorit */}
@@ -336,7 +339,11 @@ export default function HomeScreen() {
           <Text style={styles.darkCardLabel}> Favorit</Text>
         </View>
         <Text style={styles.favoritLabel}>{DUMMY.favorit.label}</Text>
-        <Text style={styles.favoritDescription}>{DUMMY.favorit.description}</Text>
+        <Text style={styles.favoritDescription}>
+          {'Kamu mengonsumsi lebih\ndari '}
+          <Text style={{fontFamily: FONTS.bold}}>{DUMMY.favorit.portion}</Text>
+          {' dalam\nseminggu ini!'}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -368,7 +375,7 @@ export default function HomeScreen() {
         <Text style={styles.headerGreeting}>
           Hi <Text style={styles.headerName}>{DUMMY.nickname}!</Text>
         </Text>
-        <Text style={styles.headerDate}>{DUMMY.date}</Text>
+        <Text style={styles.headerDate}>{todayStr}</Text>
       </BlurContainer>
 
       {/* Navbar — floats above everything */}
@@ -536,7 +543,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   aiCardTitleItalic: {
-    fontStyle: 'italic',
+    fontFamily: FONTS.boldItalic,
   },
   aiCardBody: {
     backgroundColor: '#fff',
@@ -755,9 +762,9 @@ const styles = StyleSheet.create({
     color: '#FF3E00',
   },
   pencapaianDescription: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.bold,
     fontSize: 14,
-    color: '#fff',
+    color: '#FF3E00',
   },
 
   dietCard: { marginTop: 10 },
@@ -772,12 +779,12 @@ const styles = StyleSheet.create({
   },
   dietValue: {
     fontFamily: FONTS.extraBold,
-    fontSize: 60,
+    fontSize: 40,
     color: '#fff',
   },
   dietDescription: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontFamily: FONTS.bold,
+    fontSize: 16,
     color: '#fff',
   },
 

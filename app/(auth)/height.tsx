@@ -1,21 +1,21 @@
-import React, { useState, useRef, useCallback } from 'react';
+import { NextArrowIcon } from "@/assets/images/icon";
+import { useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import {
-  View,
+  Image,
+  KeyboardAvoidingView,
+  PanResponder,
+  Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  PanResponder,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import Svg, { Line, Text as SvgText } from 'react-native-svg';
-import { useRouter } from 'expo-router';
-import { FONTS } from '../../constants/fonts';
-import { COLORS } from '../../constants/colors';
-import { useRegister } from '../../context/RegisterContext';
+  View
+} from "react-native";
+import Svg, { Line, Text as SvgText } from "react-native-svg";
+import { COLORS } from "../../constants/colors";
+import { FONTS } from "../../constants/fonts";
+import { useRegister } from "../../context/RegisterContext";
 
 const MIN_HEIGHT = 100;
 const MAX_HEIGHT = 250;
@@ -28,7 +28,7 @@ export default function HeightScreen() {
   const { setData } = useRegister();
 
   const [height, setHeight] = useState(164);
-  const [inputText, setInputText] = useState('164');
+  const [inputText, setInputText] = useState("164");
   const [loading, setLoading] = useState(false);
   const offsetRef = useRef(164 * PX_PER_CM);
   const lastYRef = useRef(0);
@@ -41,7 +41,7 @@ export default function HeightScreen() {
   const applyOffset = useCallback((offset: number) => {
     const clamped = Math.min(
       MAX_HEIGHT * PX_PER_CM,
-      Math.max(MIN_HEIGHT * PX_PER_CM, offset)
+      Math.max(MIN_HEIGHT * PX_PER_CM, offset),
     );
     offsetRef.current = clamped;
     const cm = clamp(Math.round(clamped / PX_PER_CM));
@@ -49,18 +49,22 @@ export default function HeightScreen() {
     setInputText(String(cm));
   }, []);
 
-  const startMomentum = useCallback((velocity: number) => {
-    if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
-    let vel = velocity;
-    const friction = 0.93;
-    const step = () => {
-      vel *= friction;
-      if (Math.abs(vel) < 0.3) return;
-      applyOffset(offsetRef.current + vel);
+  const startMomentum = useCallback(
+    (velocity: number) => {
+      if (animFrameRef.current !== null)
+        cancelAnimationFrame(animFrameRef.current);
+      let vel = velocity;
+      const friction = 0.93;
+      const step = () => {
+        vel *= friction;
+        if (Math.abs(vel) < 0.3) return;
+        applyOffset(offsetRef.current + vel);
+        animFrameRef.current = requestAnimationFrame(step);
+      };
       animFrameRef.current = requestAnimationFrame(step);
-    };
-    animFrameRef.current = requestAnimationFrame(step);
-  }, [applyOffset]);
+    },
+    [applyOffset],
+  );
 
   const panResponder = useRef(
     PanResponder.create({
@@ -84,7 +88,7 @@ export default function HeightScreen() {
       onPanResponderRelease: () => {
         startMomentum(-velocityRef.current * 3);
       },
-    })
+    }),
   ).current;
 
   const handleInputChange = (text: string) => {
@@ -98,7 +102,7 @@ export default function HeightScreen() {
 
   const handleSubmit = () => {
     setData({ height });
-    router.push('/(auth)/activity-level');
+    router.push("/(auth)/activity-level");
   };
 
   const renderRuler = () => {
@@ -111,7 +115,7 @@ export default function HeightScreen() {
       if (cm < MIN_HEIGHT || cm > MAX_HEIGHT) continue;
 
       const relativeCm = cm - height;
-      const y = centerY + relativeCm * PX_PER_CM;
+      const y = centerY - relativeCm * PX_PER_CM;
 
       const isTen = cm % 10 === 0;
       const isFive = cm % 5 === 0 && !isTen;
@@ -122,8 +126,8 @@ export default function HeightScreen() {
       // Ticks extend FROM right edge LEFTWARD
       const x2 = rightEdge;
       const x1 = x2 - tickWidth;
-      
-      const labelX = x2 - 54 - 12; 
+
+      const labelX = x2 - 54 - 12;
 
       ticks.push(
         <React.Fragment key={cm}>
@@ -132,12 +136,14 @@ export default function HeightScreen() {
             y1={y}
             x2={x2}
             y2={y}
-            stroke={isCenter ? '#FF3E00' : isTen ? '#555' : isFive ? '#888' : '#CCC'}
+            stroke={
+              isCenter ? "#FF3E00" : isTen ? "#555" : isFive ? "#888" : "#CCC"
+            }
             strokeWidth={isCenter ? 2.5 : isTen ? 2 : isFive ? 1.5 : 1}
           />
           {isTen && (
             <SvgText
-              x={labelX - 8}       
+              x={labelX - 8}
               y={y}
               textAnchor="end"
               alignmentBaseline="middle"
@@ -148,7 +154,7 @@ export default function HeightScreen() {
               {cm}
             </SvgText>
           )}
-        </React.Fragment>
+        </React.Fragment>,
       );
     }
     return ticks;
@@ -157,7 +163,7 @@ export default function HeightScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -165,13 +171,13 @@ export default function HeightScreen() {
         <View style={styles.titleRow}>
           <Text style={styles.title}>dengan </Text>
           <Image
-            source={require('../../assets/images/branding/LOGO_Text_Colored.png')}
+            source={require("../../assets/images/branding/LOGO_Text_Colored.png")}
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
         <Text style={styles.subtitle}>
-          Data yang kamu input akan mempengaruhi pengalaman{'\n'}
+          Data yang kamu input akan mempengaruhi pengalaman{"\n"}
           penggunaan aplikasi Nutrisee yang lebih optimal.
         </Text>
       </View>
@@ -180,28 +186,28 @@ export default function HeightScreen() {
       <View style={styles.content}>
         {/* Left side — card centered vertically */}
         <View style={styles.cardWrapper}>
-            <View style={styles.heightCard}>
-              <Text style={styles.heightCardTitle}>Tinggi Badan</Text>
-              <View style={styles.heightDisplay}>
-                  <TextInput
-                  style={styles.heightInput}
-                  value={inputText}
-                  onChangeText={handleInputChange}
-                  keyboardType="numeric"
-                  maxLength={3}
-                  selectTextOnFocus
-                  />
-                  <Text style={styles.heightUnit}>cm</Text>
-              </View>
+          <View style={styles.heightCard}>
+            <Text style={styles.heightCardTitle}>Tinggi Badan</Text>
+            <View style={styles.heightDisplay}>
+              <TextInput
+                style={styles.heightInput}
+                value={inputText}
+                onChangeText={handleInputChange}
+                keyboardType="numeric"
+                maxLength={3}
+                selectTextOnFocus
+              />
+              <Text style={styles.heightUnit}>cm</Text>
             </View>
+          </View>
         </View>
 
         {/* Right side — ruler */}
         <View style={styles.rulerContainer} {...panResponder.panHandlers}>
-            <View style={styles.indicatorArrow} />
-            <Svg width="100%" height={400}>
+          <View style={styles.indicatorArrow} />
+          <Svg width="100%" height={400}>
             {renderRuler()}
-            </Svg>
+          </Svg>
         </View>
       </View>
 
@@ -212,10 +218,10 @@ export default function HeightScreen() {
           onPress={() => router.push("/(auth)/activity-level")}
           disabled={loading}
         >
-          <Text style={styles.nextButtonText}>›</Text>
+          <NextArrowIcon width={20} height={20} />
         </TouchableOpacity>
         <Text style={styles.footerNote}>
-          Nutrisee berkomitmen untuk menggunakan data pribadi{'\n'}
+          Nutrisee berkomitmen untuk menggunakan data pribadi{"\n"}
           anda hanya untuk kebutuhan fungsional aplikasi.
         </Text>
       </View>
@@ -230,19 +236,19 @@ const styles = StyleSheet.create({
     paddingTop: 80,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 28,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontFamily: FONTS.semiBold,
     fontSize: 22,
     color: COLORS.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   logo: {
     width: 110,
@@ -252,24 +258,24 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 10,
     lineHeight: 20,
   },
   content: {
-    flexDirection: 'row',
+    flexDirection: "row",
     flex: 1,
-    alignItems: 'center',        
-    justifyContent: 'flex-start',
+    alignItems: "center",
+    justifyContent: "flex-start",
     marginHorizontal: 24,
     gap: 16,
   },
   cardWrapper: {
-    justifyContent: 'center',  
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   heightCard: {
-    backgroundColor: '#FF3E00',
+    backgroundColor: "#FF3E00",
     borderRadius: 20,
     padding: 10,
     width: 220,
@@ -277,24 +283,24 @@ const styles = StyleSheet.create({
   heightCardTitle: {
     fontFamily: FONTS.boldItalic,
     fontSize: 22,
-    color: '#fff',
+    color: "#fff",
     marginBottom: 8,
     paddingHorizontal: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   heightDisplay: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 220,
   },
   heightInput: {
     fontFamily: FONTS.extraBold,
     fontSize: 90,
-    color: '#FF3E00',
-    textAlign: 'center',
+    color: "#FF3E00",
+    textAlign: "center",
     minWidth: 120,
     padding: 0,
   },
@@ -307,28 +313,28 @@ const styles = StyleSheet.create({
   rulerContainer: {
     width: 150,
     height: 320,
-    overflow: 'hidden',
-    position: 'relative',
-    justifyContent: 'center',
-    alignSelf: 'center'
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "center",
+    alignSelf: "center",
   },
   indicatorArrow: {
-    position: 'absolute',
+    position: "absolute",
     left: 10,
-    top: '50%',
+    top: "50%",
     marginTop: -6,
     width: 0,
     height: 0,
     borderTopWidth: 6,
     borderBottomWidth: 6,
     borderLeftWidth: 10,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: '#FF3E00',
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "#FF3E00",
     zIndex: 10,
   },
   bottomSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 34,
   },
   nextButton: {
@@ -336,21 +342,16 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 40,
     zIndex: 20,
-  },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontFamily: FONTS.semiBold,
   },
   footerNote: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: 24,
   },

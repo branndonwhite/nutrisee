@@ -36,6 +36,7 @@ import {
   MaleIcon,
   FemaleIcon,
   WeightIcon,
+  BackArrowIcon
 } from '../../assets/images/icon';
 
 // ─── Logo assets ──────────────────────────────────────────────────────────────
@@ -640,10 +641,13 @@ export default function ProfileScreen() {
       {/* Header */}
       <BlurContainer intensity={60} tint="light" style={styles.header}
         androidFallbackColor="rgba(245,245,245,0.95)" gradientDirection="header">
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backArrow}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Statistik Nutrisi</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <BackArrowIcon width={10} height={15} fill="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Statistik Nutrisi</Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <View style={{ width: 32 }} />
       </BlurContainer>
 
@@ -790,7 +794,22 @@ export default function ProfileScreen() {
                   <Text style={styles.logName}>{entry.name} <Text style={styles.logCal}>~{entry.cal}kkal</Text></Text>
                   <Text style={styles.logMacro}>Karbohidrat {entry.karbo}g | Protein {entry.protein}g | Lemak {entry.lemak}g</Text>
                 </View>
-                <TouchableOpacity style={styles.logEditBtn}>
+                <TouchableOpacity
+                  style={styles.logEditBtn}
+                  onPress={() => router.push({
+                    pathname: '/(app)/result-screen',
+                    params: {
+                      name: entry.name,
+                      cal: entry.cal,
+                      karbo: entry.karbo,
+                      protein: entry.protein,
+                      lemak: entry.lemak,
+                      time: entry.time,
+                      viewMode: 'profile', 
+                      // data: JSON.stringify(mealLog)
+                    },
+                  })}
+                >
                   <NotesIcon width={22} height={22} fill="rgba(0,0,0,0.25)" />
                 </TouchableOpacity>
               </View>
@@ -829,13 +848,25 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F5F5F5' },
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 110 },
-  backButton: { width: 32, alignItems: 'center' },
-  backArrow: { fontSize: 32, color: COLORS.text, lineHeight: 36, fontFamily: FONTS.regular },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
   headerTitle: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.text },
+  headerSpacer: { width: 36 },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 126, paddingHorizontal: 16, gap: 16 },
 
-  profileCard: { backgroundColor: '#024FE9', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  profileCard: { backgroundColor: '#013397', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatarWrapper: { position: 'relative' },
   avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#E0E0E0', overflow: 'hidden', borderWidth: 3.5, borderColor: '#ECB270' },
   avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -853,7 +884,7 @@ const styles = StyleSheet.create({
   aiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 16 },
   aiTitleRow: { flexDirection: 'row', alignItems: 'center' },
   aiTitle: { fontFamily: FONTS.bold, fontSize: 17, color: '#fff' },
-  aiTitleItalic: { fontStyle: 'italic' },
+  aiTitleItalic: { fontFamily: FONTS.boldItalic },
   aiSection: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', gap: 12 },
   aiSectionLabel: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.text, width: 72, flexShrink: 0 },
   aiSectionText: { flex: 1, fontFamily: FONTS.regular, fontSize: 13, color: COLORS.text, lineHeight: 20 },
