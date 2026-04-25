@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingTop: 126, paddingHorizontal: 16, gap: 16 },
 
-  profileCard: { backgroundColor: '#024FE9', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  profileCard: { backgroundColor: '#013397', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatarWrapper: { position: 'relative' },
   avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#E0E0E0', overflow: 'hidden', borderWidth: 3.5, borderColor: '#ECB270' },
   avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
   aiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 16 },
   aiTitleRow: { flexDirection: 'row', alignItems: 'center' },
   aiTitle: { fontFamily: FONTS.bold, fontSize: 17, color: '#fff' },
-  aiTitleItalic: { fontStyle: 'italic' },
+  aiTitleItalic: { fontFamily: FONTS.boldItalic },
   aiSection: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', gap: 12 },
   aiSectionLabel: { fontFamily: FONTS.bold, fontSize: 13, color: COLORS.text, width: 72, flexShrink: 0 },
   aiSectionText: { flex: 1, fontFamily: FONTS.regular, fontSize: 13, color: COLORS.text, lineHeight: 20 },

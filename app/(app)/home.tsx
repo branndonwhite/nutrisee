@@ -290,7 +290,7 @@ export default function HomeScreen() {
           <View style={styles.addButtonWrapper}>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setShowScanModal(true)}
+              // onPress={() => setShowScanModal(true)}
             >
               <Text style={styles.addButtonText}>+</Text>
             </TouchableOpacity>

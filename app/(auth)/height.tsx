@@ -115,7 +115,7 @@ export default function HeightScreen() {
       if (cm < MIN_HEIGHT || cm > MAX_HEIGHT) continue;
 
       const relativeCm = cm - height;
-      const y = centerY + relativeCm * PX_PER_CM;
+      const y = centerY - relativeCm * PX_PER_CM;
 
       const isTen = cm % 10 === 0;
       const isFive = cm % 5 === 0 && !isTen;
