@@ -17,6 +17,9 @@ import { BackArrowIcon, NutriscanIcon } from "../../assets/images/icon";
 import GalleryIcon from "../../assets/images/icon/GalleryIcon";
 import ScanLoadingOverlay from "../../components/ScanLoadingOverlay";
 import { FONTS } from "../../constants/fonts";
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
+import { analyzeTextMeal } from '../../api/meals';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BLUE = "#024FE9";
@@ -92,26 +95,39 @@ export default function ScanTextScreen() {
     setIsLoading(true);
 
     try {
-      // TODO: replace with real API call
-      // Step 1 simulated — in real usage, your API does both steps server-side.
-      // Advance to step 2 after a short delay to show both status lines.
-      await new Promise((r) => setTimeout(r, 1200)); // simulate step 1
-      setLoadingStep(2);
-      await new Promise((r) => setTimeout(r, 1000)); // simulate step 2
+      setLoadingStep(1);
 
-      // TODO: replace with real API result
+      // Compress image to base64 if attached
+      let base64: string | undefined;
+      if (selectedImage) {
+        const compressed = await ImageManipulator.manipulateAsync(
+          selectedImage,
+          [{ resize: { width: 800 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        base64 = await FileSystem.readAsStringAsync(compressed.uri, {
+          encoding: 'base64',
+        });
+      }
+
+      setLoadingStep(2);
+
+      // ← rename here to avoid conflict with the `description` state
+      const { nutrition, description: savedDescription } = await analyzeTextMeal(description, base64);
+
       router.push({
-        pathname: "/(app)/result-screen",
+        pathname: '/(app)/result-screen',
         params: {
           data: JSON.stringify({
-            description,
+            ...nutrition,
+            description: savedDescription,
             imageUri: selectedImage ?? undefined,
           }),
         },
       });
     } finally {
       setIsLoading(false);
-      setLoadingStep(1); // reset for next use
+      setLoadingStep(1);
     }
   };
 
