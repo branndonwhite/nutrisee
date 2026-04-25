@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ import {
   WeightIcon,
   BackArrowIcon
 } from '../../assets/images/icon';
+import { uploadProfileImage, getProfile } from '../../api/profile';
 
 // ─── Logo assets ──────────────────────────────────────────────────────────────
 const LOGO_COLORED = require('../../assets/images/branding/LOGO_Text_Colored.png');
@@ -398,7 +399,7 @@ const ModalCard: React.FC<{
 );
 
 // ─── Capture card (food bg + overlay, transparent, white logo) ───────────────
-const CaptureCard = React.forwardRef<ViewShot, {
+const CaptureCard = React.forwardRef<ViewShot | null, {
   type: 'nutrient' | 'weight';
   nutrient?: Nutrient;
   remark: string;
@@ -430,7 +431,7 @@ const CaptureCard = React.forwardRef<ViewShot, {
 // ─── Share Modal ──────────────────────────────────────────────────────────────
 const ShareModal: React.FC<{
   state: ShareModalState;
-  shotRef: React.RefObject<ViewShot>;
+  shotRef: React.RefObject<ViewShot | null>;
   onClose: () => void;
 }> = ({ state, shotRef, onClose }) => {
   const nutrient = state.type === 'nutrient' ? state.nutrient : undefined;
@@ -572,7 +573,13 @@ export default function ProfileScreen() {
   const [captureBg] = useState(() => TEMP_BACKGROUNDS[Math.floor(Math.random() * TEMP_BACKGROUNDS.length)]);
 
   // shotRef lives in main screen so CaptureCard is always mounted outside Modal
-  const shotRef = useRef<ViewShot>(null);
+  const shotRef = useRef<ViewShot | null>(null);
+
+  useEffect(() => {
+  getProfile().then(p => {
+    if (p.avatar_url) setProfilePhoto(p.avatar_url);
+  }).catch(() => {}); // fail silently if no profile yet
+}, []);
 
   const openShareModal = useCallback((state: ShareModalState) => {
     setShareModal(state);
@@ -600,16 +607,37 @@ export default function ProfileScreen() {
 
   const launchCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Izin diperlukan', 'Izinkan akses kamera.'); return; }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-    if (!result.canceled) setProfilePhoto(result.assets[0].uri);
+    if (status !== 'granted') { 
+      Alert.alert('Izin diperlukan', 'Izinkan akses kamera.'); 
+      return; 
+    }
+    const result = await ImagePicker.launchCameraAsync({ 
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+      allowsEditing: true, 
+      aspect: [1, 1], 
+      quality: 0.8 
+    });
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setProfilePhoto(uri);                        // optimistic update
+      const avatar_url = await uploadProfileImage(uri);
+      setProfilePhoto(avatar_url);                 // replace with Cloudinary URL
+    }
   };
 
   const launchGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Izin diperlukan', 'Izinkan akses galeri.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-    if (!result.canceled) setProfilePhoto(result.assets[0].uri);
+    if (status !== 'granted') return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.8,
+    });
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setProfilePhoto(uri);                          // optimistic update
+      const avatar_url = await uploadProfileImage(uri);
+      setProfilePhoto(avatar_url);                   // replace with Cloudinary URL
+    }
   };
 
   return (
