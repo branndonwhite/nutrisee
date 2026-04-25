@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -40,18 +41,30 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+    <ImageBackground
+      source={require("../../assets/images/bg/SPLASH_Background.png")}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require("../../assets/images/branding/LOGO_Text_Colored.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+      {/* Shapes overlay at the top */}
+      <Image
+        source={require("../../assets/images/bg/REGIS_Shapes.png")}
+        style={styles.shapesOverlay}
+        resizeMode="cover"
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../assets/images/branding/LOGO_Text_White.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
 
       {/* Heading */}
       <Text style={styles.heading}>
@@ -66,7 +79,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email@domain.com"
-          placeholderTextColor={COLORS.placeholder}
+          placeholderTextColor="rgba(255,255,255,0.5)"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
@@ -75,7 +88,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Kata Sandi"
-          placeholderTextColor={COLORS.placeholder}
+          placeholderTextColor="rgba(255,255,255,0.5)"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -124,13 +137,25 @@ export default function RegisterScreen() {
         <Text style={styles.link}>Kebijakan Privasi</Text> kami.
       </Text>
     </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backgroundImage: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  shapesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: 280,
+    zIndex: 0,
+  },
+  container: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 32,
@@ -147,14 +172,14 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: COLORS.text,
+    color: '#fff',
     textAlign: "center",
     marginBottom: 6,
   },
   subheading: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: "center",
     marginBottom: 20,
   },
@@ -164,15 +189,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   input: {
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: COLORS.inputBorder,
+    borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: COLORS.text,
+    color: '#fff',
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
@@ -194,12 +219,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   dividerText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: 'rgba(255,255,255,0.6)',
     marginHorizontal: 12,
   },
   socialButton: {
@@ -231,14 +256,14 @@ const styles = StyleSheet.create({
   terms: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: 'rgba(255,255,255,0.6)',
     textAlign: "center",
     marginTop: 8,
     lineHeight: 18,
   },
   link: {
     fontFamily: FONTS.semiBold,
-    color: COLORS.text,
+    color: '#fff',
     textDecorationLine: "underline",
   },
 });
