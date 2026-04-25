@@ -1,11 +1,14 @@
 import client from './client';
 import * as SecureStore from 'expo-secure-store';
 
-export const register = async (email: string, password: string) => {
-  const response = await client.post('/auth/register', { email, password });
-  const { token, user } = response.data;
+export const authenticate = async (email: string, password: string) => {
+  const response = await client.post('/auth/authenticate', { email, password });
+  const { token, user, isNewUser, hasProfile } = response.data;
+
+  // Always store the token regardless of new/existing user
   await SecureStore.setItemAsync('token', token);
-  return user;
+
+  return { user, isNewUser, hasProfile };
 };
 
 export const completeProfile = async (data: {
@@ -16,7 +19,8 @@ export const completeProfile = async (data: {
   weight: number;
   activity_level: string;
   diet_goal: string;
-  weight_goal: number;
+  target_weight?: number;
+  target_date?: string;
 }) => {
   const response = await client.post('/auth/profile', data);
   return response.data.profile;

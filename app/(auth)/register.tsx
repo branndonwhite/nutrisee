@@ -16,6 +16,7 @@ import {
 import { useRegister } from '../../context/RegisterContext';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
+import { authenticate } from '../../api/auth';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -24,20 +25,30 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
+  const handleContinue = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Email dan kata sandi harus diisi");
       return;
     }
 
-    if (password.length < 8) {
-      Alert.alert("Error", "Kata sandi minimal 8 karakter");
-      return;
-    }
+    setLoading(true);
+    try {
+      const { isNewUser, hasProfile } = await authenticate(email, password);
 
-    // Just save to context, no API call
-    setData({ email, password });
-    router.push('/(auth)/personal-info');
+      if (!isNewUser && hasProfile) {
+        // Existing user with complete profile → go to app
+        router.replace('/(app)/home');
+      } else {
+        // New user OR existing user without profile → go through onboarding
+        setData({ email, password });
+        router.push('/(auth)/personal-info');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.error ?? 'Terjadi kesalahan, coba lagi';
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,77 +77,77 @@ export default function RegisterScreen() {
           />
         </View>
 
-      {/* Heading */}
-      <Text style={styles.heading}>
-        Daftar untuk memulai perjalanan sehatmu!
-      </Text>
-      <Text style={styles.subheading}>
-        Masukkan email dan kata sandi untuk mendaftar!
-      </Text>
+        {/* Heading */}
+        <Text style={styles.heading}>
+          Daftar untuk memulai perjalanan sehatmu!
+        </Text>
+        <Text style={styles.subheading}>
+          Masukkan email dan kata sandi untuk mendaftar!
+        </Text>
 
-      {/* Inputs */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email@domain.com"
-          placeholderTextColor="rgba(255,255,255,0.5)"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Kata Sandi"
-          placeholderTextColor="rgba(255,255,255,0.5)"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+        {/* Inputs */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email@domain.com"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Kata Sandi"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
 
-      {/* Lanjutkan Button */}
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.push("/(auth)/personal-info")} //change to handleRegister once all UI done
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.primaryButtonText}>Lanjutkan</Text>
-        )}
-      </TouchableOpacity>
+        {/* Lanjutkan Button */}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleContinue}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.primaryButtonText}>Lanjutkan</Text>
+          )}
+        </TouchableOpacity>
 
-      {/* Divider */}
-      <View style={styles.dividerContainer}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>atau</Text>
-        <View style={styles.dividerLine} />
-      </View>
+        {/* Divider */}
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>atau</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      {/* Google Button */}
-      <TouchableOpacity style={styles.socialButton}>
-        <Image
-          source={{ uri: "https://www.google.com/favicon.ico" }}
-          style={styles.socialIcon}
-        />
-        <Text style={styles.socialButtonText}>Lanjutkan dengan Google</Text>
-      </TouchableOpacity>
+        {/* Google Button */}
+        <TouchableOpacity style={styles.socialButton}>
+          <Image
+            source={{ uri: "https://www.google.com/favicon.ico" }}
+            style={styles.socialIcon}
+          />
+          <Text style={styles.socialButtonText}>Lanjutkan dengan Google</Text>
+        </TouchableOpacity>
 
-      {/* Apple Button */}
-      <TouchableOpacity style={styles.socialButton}>
-        <AntDesign name="apple" size={20} color={COLORS.text} />
-        <Text style={styles.socialButtonText}>Lanjutkan dengan Apple ID</Text>
-      </TouchableOpacity>
+        {/* Apple Button */}
+        <TouchableOpacity style={styles.socialButton}>
+          <AntDesign name="apple" size={20} color={COLORS.text} />
+          <Text style={styles.socialButtonText}>Lanjutkan dengan Apple ID</Text>
+        </TouchableOpacity>
 
-      {/* Terms */}
-      <Text style={styles.terms}>
-        Dengan memilih Lanjutkan, anda setuju kepada{" "}
-        <Text style={styles.link}>Syarat dan Ketentuan Layanan</Text> serta{" "}
-        <Text style={styles.link}>Kebijakan Privasi</Text> kami.
-      </Text>
-    </ScrollView>
+        {/* Terms */}
+        <Text style={styles.terms}>
+          Dengan memilih Lanjutkan, anda setuju kepada{" "}
+          <Text style={styles.link}>Syarat dan Ketentuan Layanan</Text> serta{" "}
+          <Text style={styles.link}>Kebijakan Privasi</Text> kami.
+        </Text>
+      </ScrollView>
     </ImageBackground>
   );
 }
