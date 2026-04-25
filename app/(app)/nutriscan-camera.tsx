@@ -10,15 +10,31 @@ import {
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, NutriscanIcon, CamSwitchIcon } from '../../assets/images/icon';
 import GalleryIcon from '../../assets/images/icon/GalleryIcon';
 import ScanLoadingOverlay from '../../components/ScanLoadingOverlay';
 import BlurContainer from '../../components/BlurContainer';
+import { analyzeMealImage } from '../../api/meals';
 
 const WHITE = '#FFFFFF';
 const BLACK = '#000000';
+
+// ── Compress image and return base64 ─────────────────────────────────────────
+const compressAndEncode = async (uri: string): Promise<string> => {
+  const compressed = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 800 } }],
+    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+  );
+  const base64 = await FileSystem.readAsStringAsync(compressed.uri, {
+    encoding: 'base64',
+  });
+  return base64;
+};
 
 export default function NutriScanCameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -71,7 +87,6 @@ export default function NutriScanCameraScreen() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
 
-    // Button press animation
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 0.9, duration: 80, useNativeDriver: true }),
       Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
@@ -88,18 +103,23 @@ export default function NutriScanCameraScreen() {
     setLoadingStep(1);
     setIsLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1200)); // simulate step 1
-      setLoadingStep(2);
-      await new Promise((r) => setTimeout(r, 1000)); // simulate step 2
+      // Step 1: Compress + encode
+      const base64 = await compressAndEncode(uri);
 
-      // TODO: replace with real API call
-      // const result = await logMealByImage({ imageUri: uri });
+      setLoadingStep(2);
+
+      // Step 2: Send to API
+      const { nutrition, image_url } = await analyzeMealImage(base64);
+
       router.push({
         pathname: '/(app)/result-screen',
         params: {
-          data: JSON.stringify({ imageUri: uri }),
+          data: JSON.stringify({ ...nutrition, image_url, imageUri: uri }),
         },
       });
+    } catch (err: any) {
+      console.error('submitImage error:', err.message);
+      // TODO: show an error toast/alert to the user
     } finally {
       setIsLoading(false);
       setLoadingStep(1);
@@ -141,7 +161,6 @@ export default function NutriScanCameraScreen() {
         androidFallbackColor="rgba(0,0,0,0.55)"
         gradientDirection="header"
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <BackArrowIcon width={20} height={20} fill={WHITE} />
