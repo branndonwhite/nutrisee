@@ -13,11 +13,14 @@ import {
 } from '@expo-google-fonts/rethink-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
+
   const [fontsLoaded] = useFonts({
     RethinkSans_400Regular,
     RethinkSans_400Regular_Italic,
@@ -32,9 +35,19 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
+    if (!fontsLoaded) return;
+
+    const init = async () => {
+      await SplashScreen.hideAsync();
+      const token = await SecureStore.getItemAsync('token');
+      if (token) {
+        router.replace('/(app)/home');
+      } else {
+        router.replace('/(auth)/register');
+      }
+    };
+
+    init();
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;

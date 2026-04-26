@@ -39,6 +39,7 @@ import {
   BackArrowIcon
 } from '../../assets/images/icon';
 import { uploadProfileImage, getProfile } from '../../api/profile';
+import { logout } from '../../api/auth';
 
 // ─── Logo assets ──────────────────────────────────────────────────────────────
 const LOGO_COLORED = require('../../assets/images/branding/LOGO_Text_Colored.png');
@@ -865,7 +866,26 @@ export default function ProfileScreen() {
             ))}
           </View>
         </View>
-
+        
+        {/* ── Log Out ───────────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={() => {
+            Alert.alert('Log Out', 'Kamu yakin ingin keluar?', [
+              { text: 'Batal', style: 'cancel' },
+              {
+                text: 'Log Out',
+                style: 'destructive',
+                onPress: async () => {
+                  await logout();
+                  router.replace('/(auth)/register');
+                },
+              },
+            ]);
+          }}
+        >
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -964,4 +984,18 @@ const styles = StyleSheet.create({
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: BADGE_GAP },
   badgeItem: { width: BADGE_COL_W, height: BADGE_COL_W, alignItems: 'center', justifyContent: 'center' },
   badgeImage: { width: BADGE_COL_W * 0.85, height: BADGE_COL_W * 0.85 },
+
+  logoutBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FF3E00',
+  },
+  logoutText: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: '#FF3E00',
+  },
 });
