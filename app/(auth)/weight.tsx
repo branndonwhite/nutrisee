@@ -20,8 +20,8 @@ import { BackArrowIcon, NextArrowIcon } from '../../assets/images/icon';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
-import { register, completeProfile } from "../../api/auth"; 
-import { updateWeight, updateWeightGoal } from "../../api/client";
+import { completeProfile } from "../../api/auth"; 
+import { logWeight, updateWeightGoal } from "../../api/weight";
 
 const HEADER_HEIGHT = 120;
 const MIN_WEIGHT = 20;
@@ -180,54 +180,54 @@ export default function WeightScreen() {
 
   // ── Submit ────────────────────────────────────────────────────────
   const handleRegisterSubmit = async () => {
-  if (isRegisterGoal) {
-    // setLoading(true);
-    try {
-      // await register(data.email!, data.password!);
-      // await completeProfile({
-      //   nickname: data.nickname!,
-      //   gender: data.gender!,
-      //   date_of_birth: data.date_of_birth!,
-      //   height: data.height!,
-      //   weight: data.weight!,
-      //   activity_level: data.activity_level!,
-      //   diet_goal: data.diet_goal!,
-      //   weight_goal: weight,
-      // });
-      // clearData();
-      router.replace('/(app)/home');
-    } catch (err: any) {
-      console.log('Full error:', JSON.stringify(err?.response?.data));
-      console.log('Status:', err?.response?.status);
-      console.log('Message:', err?.message);
-      Alert.alert('Error', err?.response?.data?.error || err?.message || 'Terjadi kesalahan');
-    }finally {
-      setLoading(false);
+    if (isRegisterGoal) {
+      setLoading(true);
+      try {
+        await completeProfile({
+          nickname: data.nickname!,
+          gender: data.gender!,
+          date_of_birth: data.date_of_birth!,
+          height: data.height!,
+          weight: data.weight!,
+          activity_level: data.activity_level!,
+          diet_goal: data.diet_goal!,
+          target_weight: weight,        
+        });
+        clearData();
+        router.replace('/(app)/home');
+      } catch (err: any) {
+        console.log('Full error:', JSON.stringify(err?.response?.data));
+        console.log('Status:', err?.response?.status);
+        console.log('Message:', err?.message);
+        Alert.alert('Error', err?.response?.data?.error || err?.message || 'Terjadi kesalahan');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setData({ weight });
+      router.push("/(auth)/height");
     }
-  } else {
-    setData({ weight });
-    router.push("/(auth)/height");
-  }
-};
+  };
 
   const handleUpdateSubmit = async () => {
     const message = activeTab === "current"
-    ? "Berat badan\nberhasil diperbarui!"
-    : "Target berat badan\nberhasil diperbarui!";
-    // setLoading(true);
-    // try {
-    //   await Promise.all([
-    //     updateWeight({ weight: tabStates.current.weight }),
-    //     updateWeightGoal({ weight_goal: tabStates.goal.weight }),
-    //   ]);
+      ? "Berat badan\nberhasil diperbarui!"
+      : "Target berat badan\nberhasil diperbarui!";
+    setLoading(true);
+    try {
+      await Promise.all([
+        logWeight({ weight: tabStates.current.weight }),
+        updateWeightGoal({ target_weight: tabStates.goal.weight }),
+      ]);
       router.replace(
         `/(app)/success-splash?message=${encodeURIComponent(message)}&dest=${encodeURIComponent("/(app)/home")}` as any
       );
-    // } catch (e) {
-    //   console.error("Failed to update weight", e);
-    // } finally {
-    //   setLoading(false);
-    // }
+    } catch (e) {
+      Alert.alert('Error', 'Gagal memperbarui berat badan');
+      console.error("Failed to update weight", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Display weight (active tab or register state) ─────────────────
