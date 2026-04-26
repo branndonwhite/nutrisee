@@ -24,3 +24,7 @@ export const completeProfile = async (data: {
   const response = await client.post('/auth/profile', data);
   return response.data.profile;
 };
+
+export const logout = async () => {
+  await SecureStore.deleteItemAsync('token');
+};
