@@ -19,8 +19,7 @@ export const completeProfile = async (data: {
   weight: number;
   activity_level: string;
   diet_goal: string;
-  target_weight?: number;
-  target_date?: string;
+  target_weight?: number;   // ← was weight_goal
 }) => {
   const response = await client.post('/auth/profile', data);
   return response.data.profile;
