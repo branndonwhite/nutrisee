@@ -30,6 +30,7 @@ export default function PersonalInfoScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [nicknameFocused, setNicknameFocused] = useState(false);
 
   const genderValueRef = useRef<View>(null);
   const dateValueRef = useRef<View>(null);
@@ -114,11 +115,15 @@ export default function PersonalInfoScreen() {
           </View>
           <TextInput
             style={styles.nicknameInput}
-            placeholder="Martinus"
+            placeholder={nicknameFocused ? '' : 'Martinus'}
             placeholderTextColor="#A0B4D6"
             value={nickname}
             onChangeText={setNickname}
+            onFocus={() => setNicknameFocused(true)}
+            onBlur={() => setNicknameFocused(false)}
             maxLength={30}
+            textAlign="center"
+            textAlignVertical="center"
           />
         </View>
 
@@ -190,7 +195,7 @@ export default function PersonalInfoScreen() {
         {/* Lanjutkan Button */}
         <TouchableOpacity 
           style={styles.primaryButton} 
-          onPress={() => router.push("/(auth)/weight")}    // change to handleSubmit once done
+          onPress={handleSubmit}    
           disabled={loading}
         >
           {loading

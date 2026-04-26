@@ -215,7 +215,7 @@ export default function HeightScreen() {
       <View style={styles.bottomSection}>
         <TouchableOpacity
           style={styles.nextButton}
-          onPress={() => router.push("/(auth)/activity-level")}
+          onPress={handleSubmit}
           disabled={loading}
         >
           <NextArrowIcon width={20} height={20} />

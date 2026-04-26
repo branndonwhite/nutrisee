@@ -8,6 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
 const { width: W, height: H } = Dimensions.get('window');
 
@@ -60,9 +61,14 @@ export default function SplashScreen() {
       ])
     ).start();
 
-    const timer = setTimeout(() => {
-      router.replace('/(auth)/register');
-    }, 2000);
+    const timer = setTimeout(async () => {
+      const token = await SecureStore.getItemAsync('token');
+      if (token) {
+        router.replace('/(app)/home');
+      } else {
+        router.replace('/(auth)/register');
+      }
+    }, 2000);  // keep your 2s splash duration
 
     return () => clearTimeout(timer);
   }, []);
