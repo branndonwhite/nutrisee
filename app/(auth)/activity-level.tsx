@@ -112,7 +112,7 @@ export default function ActivityLevelScreen() {
       <View style={styles.bottomSection}>
         <TouchableOpacity
           style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
-          onPress={() => router.push("/(auth)/diet-goal")}
+          onPress={handleSubmit}
           disabled={!selected}
         >
           <NextArrowIcon width={20} height={20} />
