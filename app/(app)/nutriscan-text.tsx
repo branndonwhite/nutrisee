@@ -11,7 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  FlatList
+  FlatList,
+  Alert
 } from "react-native";
 import { BackArrowIcon, NutriscanIcon } from "../../assets/images/icon";
 import GalleryIcon from "../../assets/images/icon/GalleryIcon";
@@ -125,6 +126,8 @@ export default function ScanTextScreen() {
           }),
         },
       });
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.error ?? 'Gagal menganalisis makanan, coba lagi');
     } finally {
       setIsLoading(false);
       setLoadingStep(1);
