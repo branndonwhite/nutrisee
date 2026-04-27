@@ -253,9 +253,8 @@ export default function HomeScreen() {
         </View>
         <View style={styles.calorieBar}>
           <View style={[styles.calorieProgress, { flex: safeCalorieProgress, backgroundColor: getCalorieColor(caloriesIn, calorieGoal) }]}>
-            <Text style={styles.calorieIn}>
-              {caloriesIn} <Text style={styles.calorieInLabel}>masuk</Text>
-            </Text>
+            <Text style={styles.calorieIn}>{caloriesIn}</Text>
+            <Text style={styles.calorieInLabel}>masuk</Text>
           </View>
           <View style={styles.calorieRemaining}>
             <Text style={styles.calorieLeftValue}>{caloriesLeft}</Text>
@@ -657,29 +656,32 @@ const styles = StyleSheet.create({
   },
   calorieIn: {
     fontFamily: FONTS.extraBold,
-    fontSize: 22,
+    fontSize: 20,
     color: '#fff',
+    textAlign: 'center',
   },
   calorieInLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: 12,
     color: '#fff',
+    textAlign: 'center',
   },
   calorieRemaining: {
-    minWidth: 72,
+    flex: 1,
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 10,
+    alignItems: 'center',
   },
   calorieLeftValue: {
     fontFamily: FONTS.extraBold,
     fontSize: 22,
     color: COLORS.text,
+    textAlign: 'center',
   },
   calorieLeftLabel: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 
   // ── Nutrition Grid ────────────────────────────────────────────────
