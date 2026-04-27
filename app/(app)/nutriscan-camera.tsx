@@ -7,11 +7,12 @@ import {
   Image,
   Animated,
 } from 'react-native';
+import { Audio } from 'expo-av';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { router } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, NutriscanIcon, CamSwitchIcon } from '../../assets/images/icon';
@@ -92,6 +93,7 @@ export default function NutriScanCameraScreen() {
       Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
     ]).start();
 
+    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
     if (photo?.uri) {
       setCapturedPhoto(photo.uri);

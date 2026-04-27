@@ -1,8 +1,8 @@
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 const client = axios.create({
-  baseURL: "http://192.168.100.17:3000/api",
+  baseURL: process.env.EXPO_PUBLIC_API_URL,
 });
 
 client.interceptors.request.use(async (config) => {
@@ -14,9 +14,3 @@ client.interceptors.request.use(async (config) => {
 });
 
 export default client;
-
-export const updateWeight = (data: { weight: number }) =>
-  client.put("/profile/weight", data);
-
-export const updateWeightGoal = (data: { weight_goal: number }) =>
-  client.put("/profile/weight-goal", data);

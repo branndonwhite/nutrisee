@@ -5,10 +5,10 @@ export const analyzeMealImage = async (base64: string) => {
   return response.data; // { nutrition, image_url }
 };
 
-export const analyzeTextMeal = async (description: string, base64?: string) => {
+export const analyzeTextMeal = async (description: string, image_url?: string) => {
   const response = await client.post('/meals/analyze-text', {
     description,
-    ...(base64 ? { image: base64 } : {}),
+    ...(image_url ? { image_url } : {}),
   });
   return response.data; // { nutrition, description }
 };
@@ -26,6 +26,8 @@ export const logMeal = async (nutrition: {
   vitamin_d: number;
   calcium: number;
   cholesterol: number;
+  image_url?: string;
+  description?: string;
 }) => {
   const response = await client.post('/meals/log', nutrition);
   return response.data.meal;

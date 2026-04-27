@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import {
   Animated,
   Image,
@@ -19,8 +19,8 @@ import GalleryIcon from "../../assets/images/icon/GalleryIcon";
 import ScanLoadingOverlay from "../../components/ScanLoadingOverlay";
 import { FONTS } from "../../constants/fonts";
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
-import { analyzeTextMeal } from '../../api/meals';
+import * as FileSystem from 'expo-file-system/legacy';
+import { analyzeTextMeal, analyzeMealImage } from '../../api/meals';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BLUE = "#024FE9";
@@ -40,7 +40,12 @@ const GAP = 12;
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function ScanTextScreen() {
   const [description, setDescription] = useState("");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const selectedImageRef = useRef<string | null>(null);
+  const [selectedImage, setSelectedImageState] = useState<string | null>(null);
+  const setSelectedImage = useCallback((uri: string | null) => {
+    selectedImageRef.current = uri;
+    setSelectedImageState(uri);
+  }, []);
   const [factIndex, setFactIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<1 | 2>(1);
@@ -98,23 +103,26 @@ export default function ScanTextScreen() {
     try {
       setLoadingStep(1);
 
-      // Compress image to base64 if attached
-      let base64: string | undefined;
+      // Compress + upload image to Cloudinary if attached, get URL back
+      let image_url: string | undefined;
       if (selectedImage) {
         const compressed = await ImageManipulator.manipulateAsync(
           selectedImage,
           [{ resize: { width: 800 } }],
           { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
         );
-        base64 = await FileSystem.readAsStringAsync(compressed.uri, {
+        const base64 = await FileSystem.readAsStringAsync(compressed.uri, {
           encoding: 'base64',
         });
+        // Upload to Cloudinary via analyzeMealImage — reuse its upload logic
+        const uploadResult = await analyzeMealImage(base64);
+        image_url = uploadResult.image_url;
       }
 
       setLoadingStep(2);
 
       // ← rename here to avoid conflict with the `description` state
-      const { nutrition, description: savedDescription } = await analyzeTextMeal(description, base64);
+      const { nutrition, description: savedDescription } = await analyzeTextMeal(description, image_url);
 
       router.push({
         pathname: '/(app)/result-screen',
@@ -122,6 +130,7 @@ export default function ScanTextScreen() {
           data: JSON.stringify({
             ...nutrition,
             description: savedDescription,
+            image_url: image_url ?? undefined,
             imageUri: selectedImage ?? undefined,
           }),
         },

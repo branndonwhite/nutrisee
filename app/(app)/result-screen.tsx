@@ -11,8 +11,11 @@ import {
   FlatList
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Location from 'expo-location';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, LocationIcon } from '../../assets/images/icon';
+import { logMeal } from '../../api/meals';
+import { getDailyStats } from '../../api/dashboard';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BLUE = '#014FE9';
@@ -49,18 +52,72 @@ interface NutritionResult {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function Scanreen() {
   const params = useLocalSearchParams();
-
-  // TODO: replace with real API result
   const passed = params.data ? JSON.parse(params.data as string) : {};
-  const result: NutritionResult = {
-    ...DUMMY_RESULT,
-    imageUri: passed.imageUri ?? DUMMY_RESULT.imageUri,
-  };
   const isViewOnly = params.viewMode === 'profile';
   const [macroPage, setMacroPage] = useState(0);
   const macroFlatListRef = useRef<FlatList>(null);
   const [macroCardWidth, setMacroCardWidth] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [locationName, setLocationName] = useState('Mendapatkan lokasi...');
+  const [caloriesConsumed, setCaloriesConsumed] = useState(0);
+  const [calorieGoal, setCalorieGoal] = useState(2000);
+
+  // Map snake_case API fields → display shape
+  const result: NutritionResult = {
+    foodName:      passed.food_name    ?? passed.foodName    ?? '-',
+    calories:      passed.calories     ?? 0,
+    carbs:         passed.carbs        ?? 0,
+    protein:       passed.protein      ?? 0,
+    fat:           passed.fat          ?? 0,
+    sugar:         passed.sugar        ?? 0,
+    fiber:         passed.fiber        ?? 0,
+    calcium:       passed.calcium      ?? 0,
+    cholesterol:   passed.cholesterol  ?? 0,
+    vitaminA:      passed.vitamin_a    ?? passed.vitaminA    ?? 0,
+    vitaminC:      passed.vitamin_c    ?? passed.vitaminC    ?? 0,
+    vitaminD:      passed.vitamin_d    ?? passed.vitaminD    ?? 0,
+    description:   passed.description  ?? undefined,
+    imageUri:      passed.image_url    ?? passed.imageUri    ?? undefined,
+    location:      locationName,
+    time:          new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.'),
+    date:          new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+    caloriesConsumed,
+    calorieGoal,
+  };
+
   const hasImage = !!result.imageUri;
+
+  // Fetch location and daily stats on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({});
+          const geocode = await Location.reverseGeocodeAsync(loc.coords);
+          if (geocode[0]) {
+            const { district, subregion, region } = geocode[0];
+            setLocationName(`${district ?? subregion ?? ''},
+${region ?? ''}.`);
+          }
+        } else {
+          setLocationName('Lokasi tidak diizinkan');
+        }
+      } catch {
+        setLocationName('Lokasi tidak tersedia');
+      }
+    })();
+
+    (async () => {
+      try {
+        const stats = await getDailyStats();
+        setCaloriesConsumed(stats.today.calories_consumed);
+        setCalorieGoal(stats.today.calorie_goal);
+      } catch {
+        // keep defaults
+      }
+    })();
+  }, []);
 
   // Stagger entrance animations
   const fadeAnims = Array.from({ length: 5 }, () => useRef(new Animated.Value(0)).current);
@@ -112,7 +169,7 @@ export default function Scanreen() {
     transform: [{ translateY: slideAnims[index] }],
   });
 
-  const calorieProgress = Math.min(result.caloriesConsumed / result.calorieGoal, 1);
+  const calorieProgress = calorieGoal > 0 ? Math.min((caloriesConsumed + result.calories) / calorieGoal, 1) : 0;
 
   return (
     <View style={styles.container}>
@@ -188,7 +245,7 @@ export default function Scanreen() {
             }}
             renderItem={({ item: page }) => (
               <View style={[styles.macrosRow, { width: macroCardWidth }]}>
-                {page.map((macro) => (
+                {page.map((macro: { label: string; value: number; unit: string }) => (
                   <View key={macro.label} style={[styles.macroCard, { flex: 1 }]}>
                     <Text style={styles.macroValue}>
                       {macro.value}
@@ -235,8 +292,8 @@ export default function Scanreen() {
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { flex: calorieProgress }]}>
                   <Text style={styles.progressConsumed}>
-                    {result.caloriesConsumed} 
-                    <Text style={styles.progressGoal}> / {result.calorieGoal}kkal</Text>
+                    {Math.round(caloriesConsumed + result.calories)}
+                    <Text style={styles.progressGoal}> / {calorieGoal}kkal</Text>
                   </Text>
                 </View>
                 <View style={{ flex: 1 - calorieProgress }} />
@@ -244,11 +301,37 @@ export default function Scanreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[styles.submitButton, submitting && { opacity: 0.6 }]}
               activeOpacity={0.85}
-              onPress={() => router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home')}
+              disabled={submitting}
+              onPress={async () => {
+                setSubmitting(true);
+                try {
+                  await logMeal({
+                    food_name:   result.foodName,
+                    calories:    result.calories,
+                    carbs:       result.carbs,
+                    protein:     result.protein,
+                    fat:         result.fat,
+                    sugar:       result.sugar,
+                    fiber:       result.fiber,
+                    vitamin_a:   result.vitaminA,
+                    vitamin_c:   result.vitaminC,
+                    vitamin_d:   result.vitaminD,
+                    calcium:     result.calcium,
+                    cholesterol: result.cholesterol,
+                    image_url:   passed.image_url   ?? undefined,
+                    description: passed.description ?? undefined,
+                  });
+                  router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home');
+                } catch (err) {
+                  console.error('logMeal error:', err);
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
             >
-              <Text style={styles.submitButtonText}>SUBMIT</Text>
+              <Text style={styles.submitButtonText}>{submitting ? '...' : 'SUBMIT'}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -488,10 +571,10 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: 13,
     color: BLACK,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 18,
     textAlign: 'center'
   },
   timeCard: {
@@ -556,12 +639,12 @@ const styles = StyleSheet.create({
   },
   progressConsumed: {
     fontFamily: FONTS.extraBold,
-    fontSize: 13,
+    fontSize: 11,
     color: WHITE,
   },
   progressGoal: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: 11,
     color: WHITE,
   },
   submitButton: {
