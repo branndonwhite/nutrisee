@@ -52,8 +52,11 @@ export default function HomeScreen() {
         ]);
         setStats(statsData);
         setAiOverview(overviewData);
-      } catch (err) {
-        console.error('Home fetch error:', err);
+      } catch (err: any) {
+        // Add these lines:
+        console.error('Home fetch error status:', err?.response?.status);
+        console.error('Home fetch error data:', JSON.stringify(err?.response?.data));
+        console.error('Home fetch error message:', err?.message);
       } finally {
         setLoading(false);
       }
@@ -199,10 +202,12 @@ export default function HomeScreen() {
     return '#D32F2F';
   };
 
-  const calorieGoal = stats?.today.calorie_goal ?? 0;
-  const caloriesIn = stats?.today.calories_consumed ?? 0;
+  const calorieGoal = stats?.today?.calorie_goal ?? 0;
+  const caloriesIn = stats?.today?.calories_consumed ?? 0;
   const caloriesLeft = calorieGoal - caloriesIn;
   const calorieProgress = calorieGoal > 0 ? Math.min(caloriesIn / calorieGoal, 1) : 0;
+  const safeCalorieProgress = Math.max(calorieProgress, 0.001);
+  const safeCalorieRemaining = Math.max(1 - calorieProgress, 0.001);
 
   // ─── Card renders ─────────────────────────────────────────────────
 
@@ -247,7 +252,7 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.calorieBar}>
-          <View style={[styles.calorieProgress, { flex: calorieProgress, backgroundColor: getCalorieColor(caloriesIn, calorieGoal) }]}>
+          <View style={[styles.calorieProgress, { flex: safeCalorieProgress, backgroundColor: getCalorieColor(caloriesIn, calorieGoal) }]}>
             <Text style={styles.calorieIn}>
               {caloriesIn} <Text style={styles.calorieInLabel}>masuk</Text>
             </Text>
@@ -273,9 +278,12 @@ export default function HomeScreen() {
               serat:   { consumed: nutrition?.fiber   ?? 0, goal: mg?.fiber   ?? 0 },
             };
             const item = nutritionMap[key];
+            if (!item) return null;
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
-            const progress = Math.min(item.consumed / item.goal, 1);
+            const progress = item.goal > 0 ? Math.min(item.consumed / item.goal, 1) : 0;
+            const safeProgress = Math.max(progress, 0.001);
+            const safeRemaining = Math.max(1 - progress, 0.001);
             return (
               <View key={key} style={styles.nutritionCard}>
                 <View style={styles.nutritionCardHeader}>
@@ -284,10 +292,8 @@ export default function HomeScreen() {
                 </View>
                 {/* Vertical bar — same concept as calorieBar but rotated */}
                 <View style={styles.nutritionBar}>
-                  {/* Remaining space (top) */}
-                  <View style={[styles.nutritionBarRemaining, { flex: 1 - progress }]} />
-                  {/* Filled portion (bottom) */}
-                  <View style={[styles.nutritionBarFill, { flex: progress, backgroundColor: color }]}>
+                  <View style={[styles.nutritionBarRemaining, { flex: safeRemaining }]} />
+                  <View style={[styles.nutritionBarFill, { flex: safeProgress, backgroundColor: color }]}>
                     <Text style={styles.nutritionValue}>
                       {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
                     </Text>
@@ -306,9 +312,12 @@ export default function HomeScreen() {
               serat: { consumed: nutrition2?.fiber ?? 0, goal: mg2?.fiber ?? 0 },
             };
             const item = nutritionMap2[key];
+            if (!item) return null;
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
-            const progress = Math.min(item.consumed / item.goal, 1);
+            const progress2 = item.goal > 0 ? Math.min(item.consumed / item.goal, 1) : 0;
+            const safeProgress2 = Math.max(progress2, 0.001);
+            const safeRemaining2 = Math.max(1 - progress2, 0.001);
             return (
               <View key={key} style={styles.nutritionCard}>
                 <View style={styles.nutritionCardHeader}>
@@ -316,8 +325,8 @@ export default function HomeScreen() {
                   <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>gr</Text></Text>
                 </View>
                 <View style={styles.nutritionBar}>
-                  <View style={[styles.nutritionBarRemaining, { flex: 1 - progress }]} />
-                  <View style={[styles.nutritionBarFill, { flex: progress, backgroundColor: color }]}>
+                  <View style={[styles.nutritionBarRemaining, { flex: safeRemaining2 }]} />
+                  <View style={[styles.nutritionBarFill, { flex: safeProgress2, backgroundColor: color }]}>
                     <Text style={styles.nutritionValue}>
                       {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
                     </Text>
@@ -351,12 +360,12 @@ export default function HomeScreen() {
           <AchievementIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Pencapaian</Text>
         </View>
-        <Text style={styles.pencapaianDefisit}>{stats?.pencapaian.label ?? '-'}</Text>
+        <Text style={styles.pencapaianDefisit}>{stats?.pencapaian?.label ?? '-'}</Text>
         <Text style={styles.pencapaianValue}>
-          <Text style={styles.pencapaianHighlight}>{stats?.pencapaian.value ?? 0}</Text>
-          {stats?.pencapaian.unit ?? 'kkal'}
+          <Text style={styles.pencapaianHighlight}>{stats?.pencapaian?.value ?? 0}</Text>
+          {stats?.pencapaian?.unit ?? 'kkal'}
         </Text>
-        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{stats?.pencapaian.description ?? '-'}</Text></Text>
+        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{stats?.pencapaian?.description ?? '-'}</Text></Text>
       </View>
 
       {/* Diet */}
@@ -366,8 +375,8 @@ export default function HomeScreen() {
           <DietIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Diet</Text>
         </View>
-        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{stats?.diet.kg_remaining?.toFixed(1) ?? '-'}</Text>kg</Text>
-        <Text style={{color: '#fff'}}>{stats?.diet.direction === 'turun' ? 'Turun' : 'Naik'} menuju <Text style={styles.dietDescription}>target berat</Text></Text>
+        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{stats?.diet?.kg_remaining?.toFixed(1) ?? '-'}</Text>kg</Text>
+        <Text style={{color: '#fff'}}>{stats?.diet?.direction === 'turun' ? 'Turun' : 'Naik'} menuju <Text style={styles.dietDescription}>target berat</Text></Text>
       </View>
 
       {/* Favorit */}
@@ -412,7 +421,7 @@ export default function HomeScreen() {
         gradientDirection="header"
       >
         <Text style={styles.headerGreeting}>
-          Hi <Text style={styles.headerName}>{stats?.profile.nickname ?? ''}!</Text>
+          Hi <Text style={styles.headerName}>{stats?.profile?.nickname ?? ''}!</Text>
         </Text>
         <Text style={styles.headerDate}>{todayStr}</Text>
       </BlurContainer>
@@ -448,7 +457,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/(app)/profile')}
         >
           <View style={styles.profileInner}>
-            {stats?.profile.gender?.toLowerCase() === 'male'
+            {stats?.profile?.gender?.toLowerCase() === 'male'
               ? <MaleIcon width={26} height={26} />
               : <FemaleIcon width={26} height={26} />
             }

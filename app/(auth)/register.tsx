@@ -44,6 +44,9 @@ export default function RegisterScreen() {
         router.push('/(auth)/personal-info');
       }
     } catch (err: any) {
+      console.log('authenticate error:', JSON.stringify(err?.response?.data));
+      console.log('authenticate status:', err?.response?.status);
+      console.log('authenticate message:', err?.message);
       const message = err?.response?.data?.error ?? 'Terjadi kesalahan, coba lagi';
       Alert.alert("Error", message);
     } finally {

@@ -7,6 +7,7 @@ const client = axios.create({
 
 client.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync('token');
+  console.log('Token from SecureStore:', token ? `${token.slice(0, 20)}...` : 'NULL');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

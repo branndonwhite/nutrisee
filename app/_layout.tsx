@@ -35,19 +35,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (!fontsLoaded) return;
-
-    const init = async () => {
-      await SplashScreen.hideAsync();
-      const token = await SecureStore.getItemAsync('token');
-      if (token) {
-        router.replace('/(app)/home');
-      } else {
-        router.replace('/(auth)/register');
-      }
-    };
-
-    init();
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
