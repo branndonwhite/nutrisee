@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   Animated,
   PanResponder,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
@@ -20,6 +21,7 @@ import {
   DietIcon, FavIcon, NutriscanIcon, UpdateIcon, MaleIcon, FemaleIcon, TextIcon
 } from '../../assets/images/icon';
 import { statue, body, fish } from '../../assets/images/bg-photo';
+import { getDailyStats, getAIOverview, DailyStats } from '../../api/dashboard';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 // 3-column grid: full width minus horizontal padding (16*2) minus 2 gaps (10*2), divided by 3
@@ -32,29 +34,32 @@ const NAVBAR_HEIGHT = Platform.OS === 'ios' ? 140 : 120;
 const VIEWPORT_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - NAVBAR_HEIGHT;
 const CARD_GAP = 24;
 
-const DUMMY = {
-  nickname: 'Martinus',
-  gender: 'male',
-  aiOverview: 'Hari Sabtu ya jalan-jalan,\nJalan-jalan ke Toko Jamu.\nJangan lupa makan sayuran,\ndan juga tambah lagi vitaminmu!\n\nPola makan kamu sudah tergolong baik! Pertahankan kebiasaan ini dan ikuti anjuran di atas secara konsisten untuk mencapai hasil kesehatan yang optimal ya sobat Nutrisee 😁.',
-  calorieGoal: 2650,
-  caloriesIn: 2020,
-  nutrition: {
-    karbo: { consumed: 320, goal: 430 },
-    protein: { consumed: 66, goal: 65 },
-    lemak: { consumed: 90, goal: 75 },
-    gula: { consumed: 62, goal: 50 },
-    serat: { consumed: 20, goal: 37 },
-  },
-  pencapaian: { label: 'Defisit', value: '3000', unit: 'kkal', days: '3 hari' },
-  diet: { value: '10', measurement: 'kg', month: '1 bulan.' },
-  favorit: { label: 'Raja Laut 🐟', portion: '5 porsi ikan' },
-};
-
 const TOTAL_CARDS = 3;
 
 export default function HomeScreen() {
   const router = useRouter();
   const [showScanModal, setShowScanModal] = useState(false);
+  const [stats, setStats] = useState<DailyStats | null>(null);
+  const [aiOverview, setAiOverview] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, overviewData] = await Promise.all([
+          getDailyStats(),
+          getAIOverview(),
+        ]);
+        setStats(statsData);
+        setAiOverview(overviewData);
+      } catch (err) {
+        console.error('Home fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const todayStr = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -89,14 +94,19 @@ export default function HomeScreen() {
   };
 
   const handleCardLayout = (index: number, height: number) => {
-    if (cardHeightsRef.current[index] !== undefined) return; // already measured
+    // Always update height — cards change size when real data loads
     cardHeightsRef.current[index] = height;
-    measuredRef.current += 1;
-    if (measuredRef.current === TOTAL_CARDS) {
+    // Count how many are measured
+    const measured = cardHeightsRef.current.filter(h => h !== undefined).length;
+    if (measured === TOTAL_CARDS) {
       const positions = buildSnapPositions(cardHeightsRef.current);
       snapPositionsRef.current = positions;
       setSnapPositions(positions);
-      translateY.setValue(positions[0]);
+      // Only set initial position on first build
+      if (measuredRef.current < TOTAL_CARDS) {
+        translateY.setValue(positions[0]);
+      }
+      measuredRef.current = TOTAL_CARDS;
     }
   };
 
@@ -174,14 +184,25 @@ export default function HomeScreen() {
 
   // ─── Helpers ─────────────────────────────────────────────────────
   const getNutritionColor = (consumed: number, goal: number) => {
+    if (goal === 0) return '#FF8C00';
     const ratio = consumed / goal;
-    if (ratio <= 0.7) return '#4CAF50';
-    if (ratio <= 1.0) return '#FF3E00';
+    if (ratio < 1.0)  return '#FF8C00';   // Orange: not yet reached goal
+    if (ratio <= 1.05) return '#4CAF50';  // Green: at goal or within 5%
+    return '#D32F2F';                     // Red: more than 5% over
+  };
+
+  const getCalorieColor = (consumed: number, goal: number) => {
+    if (goal === 0) return '#FF8C00';
+    const ratio = consumed / goal;
+    if (ratio < 1.0)  return '#FF8C00';
+    if (ratio <= 1.05) return '#4CAF50';
     return '#D32F2F';
   };
 
-  const caloriesLeft = DUMMY.calorieGoal - DUMMY.caloriesIn;
-  const calorieProgress = DUMMY.caloriesIn / DUMMY.calorieGoal;
+  const calorieGoal = stats?.today.calorie_goal ?? 0;
+  const caloriesIn = stats?.today.calories_consumed ?? 0;
+  const caloriesLeft = calorieGoal - caloriesIn;
+  const calorieProgress = calorieGoal > 0 ? Math.min(caloriesIn / calorieGoal, 1) : 0;
 
   // ─── Card renders ─────────────────────────────────────────────────
 
@@ -199,7 +220,10 @@ export default function HomeScreen() {
           <NIcon width={28} height={28} />
         </View>
         <View style={styles.aiCardBody}>
-          <Text style={styles.aiCardText}>{DUMMY.aiOverview}</Text>
+          {loading
+            ? <ActivityIndicator color="#014FE9" style={{ marginVertical: 20 }} />
+            : <Text style={styles.aiCardText}>{aiOverview}</Text>
+          }
         </View>
       </View>
     </Animated.View>
@@ -218,14 +242,14 @@ export default function HomeScreen() {
             <Text style={styles.calorieTitle}> Kalori Harian</Text>
           </View>
           <Text style={styles.calorieGoalText}>
-            {DUMMY.calorieGoal}
+            {calorieGoal}
             <Text style={styles.calorieUnit}>kkal/hari</Text>
           </Text>
         </View>
         <View style={styles.calorieBar}>
-          <View style={[styles.calorieProgress, { flex: calorieProgress }]}>
+          <View style={[styles.calorieProgress, { flex: calorieProgress, backgroundColor: getCalorieColor(caloriesIn, calorieGoal) }]}>
             <Text style={styles.calorieIn}>
-              {DUMMY.caloriesIn} <Text style={styles.calorieInLabel}>masuk</Text>
+              {caloriesIn} <Text style={styles.calorieInLabel}>masuk</Text>
             </Text>
           </View>
           <View style={styles.calorieRemaining}>
@@ -239,7 +263,16 @@ export default function HomeScreen() {
       <View style={styles.nutritionGrid}>
         <View style={styles.nutritionRow}>
           {(['karbo', 'protein', 'lemak'] as const).map((key) => {
-            const item = DUMMY.nutrition[key];
+            const nutrition = stats?.today;
+            const mg = stats?.macro_goals;
+            const nutritionMap = {
+              karbo:   { consumed: nutrition?.carbs   ?? 0, goal: mg?.carbs   ?? 0 },
+              protein: { consumed: nutrition?.protein ?? 0, goal: mg?.protein ?? 0 },
+              lemak:   { consumed: nutrition?.fat     ?? 0, goal: mg?.fat     ?? 0 },
+              gula:    { consumed: nutrition?.sugar   ?? 0, goal: mg?.sugar   ?? 0 },
+              serat:   { consumed: nutrition?.fiber   ?? 0, goal: mg?.fiber   ?? 0 },
+            };
+            const item = nutritionMap[key];
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
             const progress = Math.min(item.consumed / item.goal, 1);
@@ -266,7 +299,13 @@ export default function HomeScreen() {
         </View>
         <View style={styles.nutritionRow}>
           {(['gula', 'serat'] as const).map((key) => {
-            const item = DUMMY.nutrition[key];
+            const nutrition2 = stats?.today;
+            const mg2 = stats?.macro_goals;
+            const nutritionMap2 = {
+              gula:  { consumed: nutrition2?.sugar ?? 0, goal: mg2?.sugar ?? 0 },
+              serat: { consumed: nutrition2?.fiber ?? 0, goal: mg2?.fiber ?? 0 },
+            };
+            const item = nutritionMap2[key];
             const label = key.charAt(0).toUpperCase() + key.slice(1);
             const color = getNutritionColor(item.consumed, item.goal);
             const progress = Math.min(item.consumed / item.goal, 1);
@@ -312,12 +351,12 @@ export default function HomeScreen() {
           <AchievementIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Pencapaian</Text>
         </View>
-        <Text style={styles.pencapaianDefisit}>{DUMMY.pencapaian.label}</Text>
+        <Text style={styles.pencapaianDefisit}>{stats?.pencapaian.label ?? '-'}</Text>
         <Text style={styles.pencapaianValue}>
-          <Text style={styles.pencapaianHighlight}>{DUMMY.pencapaian.value}</Text>
-          {DUMMY.pencapaian.unit}
+          <Text style={styles.pencapaianHighlight}>{stats?.pencapaian.value ?? 0}</Text>
+          {stats?.pencapaian.unit ?? 'kkal'}
         </Text>
-        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{DUMMY.pencapaian.days}</Text></Text>
+        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{stats?.pencapaian.description ?? '-'}</Text></Text>
       </View>
 
       {/* Diet */}
@@ -327,8 +366,8 @@ export default function HomeScreen() {
           <DietIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Diet</Text>
         </View>
-        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{DUMMY.diet.value}</Text>{DUMMY.diet.measurement}</Text>
-        <Text style={{color: '#fff'}}>Turun dalam <Text style={styles.dietDescription}>{DUMMY.diet.month}</Text></Text>
+        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{stats?.diet.kg_remaining?.toFixed(1) ?? '-'}</Text>kg</Text>
+        <Text style={{color: '#fff'}}>{stats?.diet.direction === 'turun' ? 'Turun' : 'Naik'} menuju <Text style={styles.dietDescription}>target berat</Text></Text>
       </View>
 
       {/* Favorit */}
@@ -338,10 +377,10 @@ export default function HomeScreen() {
           <FavIcon width={18} height={18} />
           <Text style={styles.darkCardLabel}> Favorit</Text>
         </View>
-        <Text style={styles.favoritLabel}>{DUMMY.favorit.label}</Text>
+        <Text style={styles.favoritLabel}>{stats?.favorit?.food_name ?? '🍽️'}</Text>
         <Text style={styles.favoritDescription}>
-          {'Kamu mengonsumsi lebih\ndari '}
-          <Text style={{fontFamily: FONTS.bold}}>{DUMMY.favorit.portion}</Text>
+          {'Kamu mencatatnya sebanyak '}
+          <Text style={{fontFamily: FONTS.bold}}>{stats?.favorit?.count ?? 0}x</Text>
           {' dalam\nseminggu ini!'}
         </Text>
       </View>
@@ -373,7 +412,7 @@ export default function HomeScreen() {
         gradientDirection="header"
       >
         <Text style={styles.headerGreeting}>
-          Hi <Text style={styles.headerName}>{DUMMY.nickname}!</Text>
+          Hi <Text style={styles.headerName}>{stats?.profile.nickname ?? ''}!</Text>
         </Text>
         <Text style={styles.headerDate}>{todayStr}</Text>
       </BlurContainer>
@@ -409,7 +448,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/(app)/profile')}
         >
           <View style={styles.profileInner}>
-            {DUMMY.gender === 'male'
+            {stats?.profile.gender?.toLowerCase() === 'male'
               ? <MaleIcon width={26} height={26} />
               : <FemaleIcon width={26} height={26} />
             }
@@ -485,6 +524,7 @@ const styles = StyleSheet.create({
   // Card stack starts at HEADER_HEIGHT so cards begin below the header
   cardStack: {
     paddingTop: HEADER_HEIGHT,
+    paddingBottom: VIEWPORT_HEIGHT,
     paddingHorizontal: 16,
     gap: CARD_GAP,
   },
@@ -602,7 +642,6 @@ const styles = StyleSheet.create({
     padding: 2
   },
   calorieProgress: {
-    backgroundColor: '#FF3E00',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
@@ -618,9 +657,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   calorieRemaining: {
-    flex: 0.3,
+    minWidth: 72,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 10,
   },
   calorieLeftValue: {
     fontFamily: FONTS.extraBold,
