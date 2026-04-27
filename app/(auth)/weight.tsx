@@ -1,27 +1,27 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
+  Animated,
   Dimensions,
   Image,
   KeyboardAvoidingView,
   PanResponder,
   Platform,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StatusBar,
-  Animated,
-  Alert,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
-import { BackArrowIcon, NextArrowIcon } from '../../assets/images/icon';
+import { completeProfile } from "../../api/auth";
+import { logWeight, updateWeightGoal, getWeightGoal } from '../../api/weight';
+import { BackArrowIcon, NextArrowIcon } from "../../assets/images/icon";
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { useRegister } from "../../context/RegisterContext";
-import { completeProfile } from "../../api/auth"; 
-import { logWeight, updateWeightGoal } from "../../api/weight";
 
 const HEADER_HEIGHT = 120;
 const MIN_WEIGHT = 20;
@@ -48,10 +48,36 @@ export default function WeightScreen() {
   // ── Tab state (update mode only) ──────────────────────────────────
   const [activeTab, setActiveTab] = useState<"current" | "goal">("current");
   const tabUnderlineAnim = useRef(new Animated.Value(0)).current;
-  const [tabStates, setTabStates] = useState<{ current: TabState; goal: TabState }>({
+  const [tabStates, setTabStates] = useState<{
+    current: TabState;
+    goal: TabState;
+  }>({
     current: { weight: 70, angle: 0 },
     goal: { weight: 70, angle: 0 },
   });
+
+  useEffect(() => {
+    if (!isUpdate) return;
+
+    const fetchWeightData = async () => {
+      try {
+        const data = await getWeightGoal();
+        const currentW = data.current_weight ?? 70;
+        const goalW = data.target_weight ?? 70;
+
+        setTabStates({
+          current: { weight: currentW, angle: (currentW - 70) * DEG_PER_KG },
+          goal:    { weight: goalW,    angle: (goalW    - 70) * DEG_PER_KG },
+        });
+
+        currentAngleRef.current = (currentW - 70) * DEG_PER_KG;
+      } catch (err) {
+        console.error('Failed to fetch weight data:', err);
+      }
+    };
+
+    fetchWeightData();
+  }, [isUpdate]);
 
   // ── Register mode state ───────────────────────────────────────────
   const [weight, setWeight] = useState(70);
@@ -67,7 +93,10 @@ export default function WeightScreen() {
   // ── Date ──────────────────────────────────────────────────────────
   const today = new Date();
   const dateStr = today.toLocaleDateString("id-ID", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 
   // ── Tab switching ─────────────────────────────────────────────────
@@ -76,15 +105,18 @@ export default function WeightScreen() {
     Animated.spring(tabUnderlineAnim, {
       toValue: tab === "current" ? 0 : 1,
       useNativeDriver: false,
-      tension: 60, friction: 12,
+      tension: 60,
+      friction: 12,
     }).start();
     // Restore angle ref for the newly active tab
     currentAngleRef.current = tabStates[tab].angle;
   };
 
   // ── Scale helpers ─────────────────────────────────────────────────
-  const clamp = (val: number) => Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, val));
-  const angleToKg = (angle: number) => clamp(Math.round(70 + angle / DEG_PER_KG));
+  const clamp = (val: number) =>
+    Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, val));
+  const angleToKg = (angle: number) =>
+    clamp(Math.round(70 + angle / DEG_PER_KG));
 
   const applyAngle = useCallback(
     (angle: number) => {
@@ -114,7 +146,8 @@ export default function WeightScreen() {
 
   const startMomentum = useCallback(
     (velocity: number) => {
-      if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current !== null)
+        cancelAnimationFrame(animFrameRef.current);
       let vel = velocity;
       const friction = 0.93;
       const step = () => {
@@ -191,15 +224,18 @@ export default function WeightScreen() {
           weight: data.weight!,
           activity_level: data.activity_level!,
           diet_goal: data.diet_goal!,
-          target_weight: weight,        
+          target_weight: weight,
         });
         clearData();
-        router.replace('/(app)/home');
+        router.replace("/(app)/home");
       } catch (err: any) {
-        console.log('Full error:', JSON.stringify(err?.response?.data));
-        console.log('Status:', err?.response?.status);
-        console.log('Message:', err?.message);
-        Alert.alert('Error', err?.response?.data?.error || err?.message || 'Terjadi kesalahan');
+        console.log("Full error:", JSON.stringify(err?.response?.data));
+        console.log("Status:", err?.response?.status);
+        console.log("Message:", err?.message);
+        Alert.alert(
+          "Error",
+          err?.response?.data?.error || err?.message || "Terjadi kesalahan",
+        );
       } finally {
         setLoading(false);
       }
@@ -210,9 +246,10 @@ export default function WeightScreen() {
   };
 
   const handleUpdateSubmit = async () => {
-    const message = activeTab === "current"
-      ? "Berat badan\nberhasil diperbarui!"
-      : "Target berat badan\nberhasil diperbarui!";
+    const message =
+      activeTab === "current"
+        ? "Berat badan\nberhasil diperbarui!"
+        : "Target berat badan\nberhasil diperbarui!";
     setLoading(true);
     try {
       await Promise.all([
@@ -220,10 +257,10 @@ export default function WeightScreen() {
         updateWeightGoal({ target_weight: tabStates.goal.weight }),
       ]);
       router.replace(
-        `/(app)/success-splash?message=${encodeURIComponent(message)}&dest=${encodeURIComponent("/(app)/home")}` as any
+        `/(app)/success-splash?message=${encodeURIComponent(message)}&dest=${encodeURIComponent("/(app)/home")}` as any,
       );
     } catch (e) {
-      Alert.alert('Error', 'Gagal memperbarui berat badan');
+      Alert.alert("Error", "Gagal memperbarui berat badan");
       console.error("Failed to update weight", e);
     } finally {
       setLoading(false);
@@ -238,7 +275,11 @@ export default function WeightScreen() {
     const ticks = [];
     const visibleRange = 30;
 
-    for (let kg = displayWeight - visibleRange; kg <= displayWeight + visibleRange; kg++) {
+    for (
+      let kg = displayWeight - visibleRange;
+      kg <= displayWeight + visibleRange;
+      kg++
+    ) {
       if (kg < MIN_WEIGHT || kg > MAX_WEIGHT) continue;
 
       const relativeAngle = (kg - displayWeight) * DEG_PER_KG;
@@ -254,28 +295,40 @@ export default function WeightScreen() {
       const outerX = CENTER_X + RADIUS * Math.sin(angleRad);
       const outerY = CENTER_Y - RADIUS * Math.cos(angleRad) + SVG_PADDING_TOP;
       const innerX = CENTER_X + (RADIUS - tickLength) * Math.sin(angleRad);
-      const innerY = CENTER_Y - (RADIUS - tickLength) * Math.cos(angleRad) + SVG_PADDING_TOP;
+      const innerY =
+        CENTER_Y - (RADIUS - tickLength) * Math.cos(angleRad) + SVG_PADDING_TOP;
 
       const labelRadius = RADIUS + 28;
       const labelX = CENTER_X + labelRadius * Math.sin(angleRad);
-      const labelY = CENTER_Y - labelRadius * Math.cos(angleRad) + SVG_PADDING_TOP;
+      const labelY =
+        CENTER_Y - labelRadius * Math.cos(angleRad) + SVG_PADDING_TOP;
 
       const isLabelVisible =
-        labelY > 0 && labelY < SCALE_HEIGHT + SVG_PADDING_TOP &&
-        labelX > 0 && labelX < SCREEN_WIDTH;
+        labelY > 0 &&
+        labelY < SCALE_HEIGHT + SVG_PADDING_TOP &&
+        labelX > 0 &&
+        labelX < SCREEN_WIDTH;
 
       ticks.push(
         <React.Fragment key={kg}>
           <Line
-            x1={outerX} y1={outerY} x2={innerX} y2={innerY}
-            stroke={isCenter ? "#FF3E00" : isTen ? "#555" : isFive ? "#888" : "#CCC"}
+            x1={outerX}
+            y1={outerY}
+            x2={innerX}
+            y2={innerY}
+            stroke={
+              isCenter ? "#FF3E00" : isTen ? "#555" : isFive ? "#888" : "#CCC"
+            }
             strokeWidth={isCenter ? 2.5 : isTen ? 2 : isFive ? 1.5 : 1}
           />
           {isLabel && isLabelVisible && (
             <SvgText
-              x={labelX} y={labelY + 4}
-              textAnchor="middle" fontSize={23}
-              fill="#888" fontFamily={FONTS.bold}
+              x={labelX}
+              y={labelY + 4}
+              textAnchor="middle"
+              fontSize={23}
+              fill="#888"
+              fontFamily={FONTS.bold}
             >
               {kg}
             </SvgText>
@@ -297,13 +350,21 @@ export default function WeightScreen() {
       style={[styles.root, isUpdate && styles.rootUpdate]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {isUpdate && <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />}
+      {isUpdate && (
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={COLORS.background}
+        />
+      )}
 
       {/* Header */}
       {isUpdate ? (
         // Update: absolute, home-mirrored height — back button + title + date
         <View style={styles.headerUpdate}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <BackArrowIcon width={10} height={15} fill="#000" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
@@ -333,25 +394,46 @@ export default function WeightScreen() {
 
       {/* Weight Card */}
       <View style={[styles.weightCard, isUpdate && styles.weightCardUpdate]}>
-
         {/* Tab switcher — update mode only */}
         {isUpdate ? (
           <View style={styles.tabBar}>
-            <TouchableOpacity style={styles.tabButton} onPress={() => switchTab("current")} activeOpacity={0.8}>
-              <Text style={[styles.tabLabel, activeTab === "current" && styles.tabLabelActive]}>
+            <TouchableOpacity
+              style={styles.tabButton}
+              onPress={() => switchTab("current")}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  activeTab === "current" && styles.tabLabelActive,
+                ]}
+              >
                 Saat Ini
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.tabButton} onPress={() => switchTab("goal")} activeOpacity={0.8}>
-              <Text style={[styles.tabLabel, activeTab === "goal" && styles.tabLabelActive]}>
+            <TouchableOpacity
+              style={styles.tabButton}
+              onPress={() => switchTab("goal")}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  activeTab === "goal" && styles.tabLabelActive,
+                ]}
+              >
                 Target
               </Text>
             </TouchableOpacity>
-            <Animated.View style={[styles.tabUnderline, { left: tabUnderlineLeft }]} />
+            <Animated.View
+              style={[styles.tabUnderline, { left: tabUnderlineLeft }]}
+            />
           </View>
         ) : (
           <Text style={styles.weightCardTitle}>
-            {isRegisterGoal ? "Target berat badan saya adalah..." : "Berat Badan"}
+            {isRegisterGoal
+              ? "Target berat badan saya adalah..."
+              : "Berat Badan"}
           </Text>
         )}
 
@@ -384,7 +466,10 @@ export default function WeightScreen() {
       <View style={styles.bottomSection}>
         {isUpdate ? (
           <TouchableOpacity
-            style={[styles.updateButton, loading && styles.updateButtonDisabled]}
+            style={[
+              styles.updateButton,
+              loading && styles.updateButtonDisabled,
+            ]}
             onPress={handleUpdateSubmit}
             disabled={loading}
             activeOpacity={0.85}
@@ -394,7 +479,10 @@ export default function WeightScreen() {
             </Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.nextButton} onPress={handleRegisterSubmit}>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={handleRegisterSubmit}
+          >
             <NextArrowIcon width={20} height={20} />
           </TouchableOpacity>
         )}
@@ -422,27 +510,29 @@ const styles = StyleSheet.create({
 
   // ── Update header: absolute, mirrors home.tsx geometry ────────────
   headerUpdate: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     height: HEADER_HEIGHT,
     paddingTop: 56,
     paddingBottom: 16,
     paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.background,
     zIndex: 10,
   },
   headerCenter: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   headerDate: {
     fontFamily: FONTS.regular,
     fontSize: 13,
     color: COLORS.textSecondary,
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   // ── Register header: normal flow, original layout ─────────────────
@@ -450,12 +540,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 28,
   },
-  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
-  title: { fontFamily: FONTS.semiBold, fontSize: 22, color: COLORS.text, textAlign: "center" },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 22,
+    color: COLORS.text,
+    textAlign: "center",
+  },
   logo: { width: 110, height: 49 },
   subtitle: {
-    fontFamily: FONTS.regular, fontSize: 12, color: COLORS.textSecondary,
-    textAlign: "center", marginTop: 10, lineHeight: 20,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginTop: 10,
+    lineHeight: 20,
   },
 
   // Update header title
@@ -463,106 +566,182 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 4,
     elevation: 2,
     marginLeft: 2,
   },
-  backChevron: { fontSize: 28, color: "#1A1A1A", lineHeight: 32, marginTop: -2 },
+  backChevron: {
+    fontSize: 28,
+    color: "#1A1A1A",
+    lineHeight: 32,
+    marginTop: -2,
+  },
   updateTitle: {
-    flex: 1, textAlign: "center", fontFamily: FONTS.bold,
-    fontSize: 20, color: COLORS.text, letterSpacing: -0.3,
+    flex: 1,
+    textAlign: "center",
+    fontFamily: FONTS.bold,
+    fontSize: 20,
+    color: COLORS.text,
+    letterSpacing: -0.3,
   },
   headerSpacer: { width: 36 },
 
   // Weight card
   weightCard: {
-    backgroundColor: "#FF3E00", borderRadius: 20,
-    padding: 10, marginBottom: 12, 
+    backgroundColor: "#FF3E00",
+    borderRadius: 20,
+    padding: 10,
+    marginBottom: 12,
   },
   weightCardUpdate: {
     marginTop: 20,
   },
   weightCardTitle: {
-    fontFamily: FONTS.boldItalic, fontSize: 18, color: "#fff",
-    marginBottom: 8, paddingHorizontal: 8, textAlign: "center",
+    fontFamily: FONTS.boldItalic,
+    fontSize: 18,
+    color: "#fff",
+    marginBottom: 8,
+    paddingHorizontal: 8,
+    textAlign: "center",
   },
   weightDisplay: {
-    backgroundColor: "#fff", borderRadius: 12,
-    paddingVertical: 24, paddingHorizontal: 16,
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "center", minHeight: 170,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 170,
   },
   weightInput: {
-    fontFamily: FONTS.extraBold, fontSize: 90,
-    color: "#FF3E00", textAlign: "center", minWidth: 120,
+    fontFamily: FONTS.extraBold,
+    fontSize: 90,
+    color: "#FF3E00",
+    textAlign: "center",
+    minWidth: 120,
   },
   weightUnit: {
-    fontFamily: FONTS.medium, fontSize: 40,
-    color: COLORS.textSecondary, alignSelf: "flex-end",
-    marginBottom: 26, marginLeft: -4,
+    fontFamily: FONTS.medium,
+    fontSize: 40,
+    color: COLORS.textSecondary,
+    alignSelf: "flex-end",
+    marginBottom: 26,
+    marginLeft: -4,
   },
 
   // Tab switcher
   tabBar: {
-    flexDirection: "row", marginBottom: 10,
-    position: "relative", height: 44,
+    flexDirection: "row",
+    marginBottom: 10,
+    position: "relative",
+    height: 44,
     backgroundColor: "rgba(0,0,0,0.18)",
-    borderRadius: 14, overflow: "hidden",
+    borderRadius: 14,
+    overflow: "hidden",
   },
-  tabButton: { flex: 1, alignItems: "center", justifyContent: "center", zIndex: 2 },
-  tabLabel: { fontFamily: FONTS.bold, fontSize: 16, color: "rgba(255,255,255,0.55)" },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  tabLabel: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: "rgba(255,255,255,0.55)",
+  },
   tabLabelActive: { color: "#FFFFFF" },
   tabUnderline: {
-    position: "absolute", bottom: 4, top: 4, width: "46%",
-    backgroundColor: "#FF3E00", borderRadius: 10, zIndex: 1,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
+    position: "absolute",
+    bottom: 4,
+    top: 4,
+    width: "46%",
+    backgroundColor: "#FF3E00",
+    borderRadius: 10,
+    zIndex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   // Scale
   scaleContainer: {
     height: SCALE_HEIGHT + SVG_PADDING_TOP,
-    position: "absolute", bottom: 50, left: 0, right: 0, zIndex: 1,
+    position: "absolute",
+    bottom: 50,
+    left: 0,
+    right: 0,
+    zIndex: 1,
   },
   indicatorContainer: {
-    position: "absolute", top: 468 + SCALE_HEIGHT / 12,
-    left: 0, right: 0, alignItems: "center", zIndex: 15, paddingTop: 25,
+    position: "absolute",
+    top: 468 + SCALE_HEIGHT / 12,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 15,
+    paddingTop: 25,
   },
   indicatorArrow: {
-    width: 0, height: 0,
-    borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 12,
-    borderLeftColor: "transparent", borderRightColor: "transparent",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 12,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
     borderTopColor: "#FF3E00",
   },
 
   // Bottom section
   bottomSection: {
-    alignItems: "center", paddingBottom: 34, paddingTop: 8, marginTop: "auto",
+    alignItems: "center",
+    paddingBottom: 34,
+    paddingTop: 8,
+    marginTop: "auto",
   },
   nextButton: {
-    backgroundColor: COLORS.primary, width: 56, height: 56,
-    borderRadius: 20, alignItems: "center", justifyContent: "center",
-    marginBottom: 40, zIndex: 20,
+    backgroundColor: COLORS.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 40,
+    zIndex: 20,
   },
   updateButton: {
-    backgroundColor: "#1A1A1A", borderRadius: 20,
-    paddingVertical: 18, paddingHorizontal: 80,
-    alignItems: "center", marginBottom: 40, zIndex: 20,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 80,
+    alignItems: "center",
+    marginBottom: 40,
+    zIndex: 20,
     // shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
     // shadowOpacity: 0.18, shadowRadius: 10, elevation: 5,
   },
   updateButtonDisabled: { backgroundColor: "#555555" },
   updateButtonText: {
-    fontFamily: FONTS.bold, fontSize: 18, color: "#FFFFFF", letterSpacing: 0.3,
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
   footerNote: {
-    fontFamily: FONTS.regular, fontSize: 12,
-    color: COLORS.textSecondary, textAlign: "center", lineHeight: 18,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
   },
 });
