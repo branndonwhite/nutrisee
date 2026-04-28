@@ -456,10 +456,17 @@ export default function HomeScreen() {
           onPress={() => router.push('/(app)/profile')}
         >
           <View style={styles.profileInner}>
-            {stats?.profile?.gender?.toLowerCase() === 'male'
-              ? <MaleIcon width={26} height={26} />
-              : <FemaleIcon width={26} height={26} />
-            }
+            {stats?.profile?.avatar_url ? (
+              <Image
+                source={{ uri: stats.profile.avatar_url }}
+                style={{ width: '100%', height: '100%', borderRadius: 0 }}
+                resizeMode="cover"
+              />
+            ) : stats?.profile?.gender?.toLowerCase().includes('laki') ? (
+              <MaleIcon width={26} height={26} />
+            ) : (
+              <FemaleIcon width={26} height={26} />
+            )}
           </View>
         </TouchableOpacity>
       </BlurContainer>
