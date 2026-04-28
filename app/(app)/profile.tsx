@@ -38,7 +38,17 @@ import {
   WeightIcon,
   BackArrowIcon
 } from '../../assets/images/icon';
-import { uploadProfileImage, getProfile } from '../../api/profile';
+import { uploadProfileImage, getProfile, getAITips, getWeeklyStats, getWeightTarget, getBadges, markShared } from '../../api/profile';
+import { getCalendars } from 'expo-localization';
+
+const getDeviceTimezone = () => {
+  try { return getCalendars()[0]?.timeZone ?? 'Asia/Jakarta'; }
+  catch { return 'Asia/Jakarta'; }
+};
+const getLocalDateStr = () =>
+  new Date().toLocaleDateString('en-CA', { timeZone: getDeviceTimezone() });
+import { getMealHistory } from '../../api/meals';
+import { getWeightHistory } from '../../api/weight';
 import { logout } from '../../api/auth';
 
 // ─── Logo assets ──────────────────────────────────────────────────────────────
@@ -168,16 +178,19 @@ const DUMMY = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const getRemarkForState = (state: ShareModalState): string => {
+const getRemarkForState = (state: ShareModalState, weightData?: typeof DUMMY.weightData): string => {
   if (state.type === 'nutrient') {
     const n = state.nutrient;
     const today = n.values[n.values.length - 1];
+    if (!today || n.goal === 0) return '-';
     const pct = Math.round(Math.abs(today - n.goal) / n.goal * 100);
     return today < n.goal ? `Defisit ${pct}%!` : `Surplus ${pct}%!`;
   }
-  const d = DUMMY.weightData;
-  const diff = d.startWeight - d.values[d.values.length - 1];
-  return diff > 0 ? `Turun ${diff}kg` : `Naik ${Math.abs(diff)}kg`;
+  const d = weightData ?? DUMMY.weightData;
+  const nonZero = d.values.filter(v => v > 0);
+  if (nonZero.length < 2) return 'Data kurang';
+  const diff = nonZero[0] - nonZero[nonZero.length - 1];
+  return diff > 0 ? `Turun ${diff.toFixed(1)}kg` : `Naik ${Math.abs(diff).toFixed(1)}kg`;
 };
 
 const getRemarkColor = (state: ShareModalState): string =>
@@ -353,10 +366,12 @@ const wStyles = StyleSheet.create({
 const ChartCardContent: React.FC<{
   type: 'nutrient' | 'weight';
   nutrient?: Nutrient;
+  weightData?: WeightData;
+  dates?: string[];
   remark: string;
   remarkColor: string;
   cardW: number;
-}> = ({ type, nutrient, remark, remarkColor, cardW }) => {
+}> = ({ type, nutrient, weightData, dates, remark, remarkColor, cardW }) => {
   const cardContentW = cardW - 32; // 16px padding each side
   const remarkMatch = remark.match(/^(.*?)(\d+\S*)$/);
   const remarkLabel = remarkMatch?.[1].trim() ?? remark;
@@ -378,8 +393,8 @@ const ChartCardContent: React.FC<{
       </View>
       <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
         {type === 'nutrient'
-          ? <BarChart nutrient={nutrient!} dates={DUMMY.weekDates} contentWidth={cardContentW} />
-          : <WeightChart data={DUMMY.weightData} lineW={cardContentW} />
+          ? <BarChart nutrient={nutrient!} dates={dates ?? DUMMY.weekDates} contentWidth={cardContentW} />
+          : <WeightChart data={weightData ?? DUMMY.weightData} lineW={cardContentW} />
         }
       </View>
     </>
@@ -390,6 +405,8 @@ const ChartCardContent: React.FC<{
 const ModalCard: React.FC<{
   type: 'nutrient' | 'weight';
   nutrient?: Nutrient;
+  weightData?: WeightData;
+  dates?: string[];
   remark: string;
   remarkColor: string;
   cardW: number;
@@ -403,6 +420,8 @@ const ModalCard: React.FC<{
 const CaptureCard = React.forwardRef<ViewShot | null, {
   type: 'nutrient' | 'weight';
   nutrient?: Nutrient;
+  weightData?: WeightData;
+  dates?: string[];
   remark: string;
   remarkColor: string;
   bgSource: any;
@@ -434,9 +453,11 @@ const ShareModal: React.FC<{
   state: ShareModalState;
   shotRef: React.RefObject<ViewShot | null>;
   onClose: () => void;
-}> = ({ state, shotRef, onClose }) => {
+  weightData?: WeightData;
+  dates?: string[];
+}> = ({ state, shotRef, onClose, weightData, dates }) => {
   const nutrient = state.type === 'nutrient' ? state.nutrient : undefined;
-  const remark = getRemarkForState(state);
+  const remark = getRemarkForState(state, weightData);
   const remarkColor = getRemarkColor(state);
 
   const handleSave = async () => {
@@ -461,9 +482,10 @@ const ShareModal: React.FC<{
       if (canShare) {
         await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Bagikan Grafik Nutrisi' });
       } else {
-        // Fallback for iOS simulator / web
         await Share.share({ url: uri, message: 'Lihat progress nutrisi saya di Nutrisee!' });
       }
+      // Mark share badge
+      markShared().catch(() => {});
     } catch (e) {
       Alert.alert('Gagal', 'Tidak dapat membagikan gambar.');
     }
@@ -497,6 +519,8 @@ const ShareModal: React.FC<{
           <ModalCard
             type={state.type}
             nutrient={nutrient}
+            weightData={weightData}
+            dates={dates}
             remark={remark}
             remarkColor={remarkColor}
             cardW={SHARE_CARD_W}
@@ -569,18 +593,83 @@ export default function ProfileScreen() {
   const [profilePhoto, setProfilePhoto] = useState<string | null>(DUMMY.profilePhoto);
   const [aiTipIndex, setAiTipIndex] = useState(0);
   const [nutrientIndex, setNutrientIndex] = useState(0);
-  const [activeDayIndex, setActiveDayIndex] = useState(1);
+  const [activeDayIndex, setActiveDayIndex] = useState(6); // 6 = today (last in 7-day array)
   const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
   const [captureBg] = useState(() => TEMP_BACKGROUNDS[Math.floor(Math.random() * TEMP_BACKGROUNDS.length)]);
 
   // shotRef lives in main screen so CaptureCard is always mounted outside Modal
   const shotRef = useRef<ViewShot | null>(null);
 
+  // ── Real data state ──────────────────────────────────────────────
+  const [profileData, setProfileData] = useState<{
+    nickname: string;
+    gender: string;
+    height: number;
+    weight: number;
+    target_weight: number | null;
+  } | null>(null);
+  const [mealLogs, setMealLogs] = useState<any[]>([]);
+  const [weightHistory, setWeightHistory] = useState<{ weight: number; logged_at: string }[]>([]);
+  const [weightTarget, setWeightTarget] = useState<{ current_weight: number; target_weight: number | null; estimated_days_to_target: number | null } | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [aiTips, setAiTips] = useState<typeof DUMMY.aiTips>(DUMMY.aiTips);
+  const [weeklyStats, setWeeklyStats] = useState<{ week: any[]; dates: string[]; goals: any } | null>(null);
+  const [badgeStates, setBadgeStates] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-  getProfile().then(p => {
-    if (p.avatar_url) setProfilePhoto(p.avatar_url);
-  }).catch(() => {}); // fail silently if no profile yet
-}, []);
+    // Profile + avatar
+    getProfile().then(p => {
+      if (p.avatar_url) setProfilePhoto(p.avatar_url);
+      setProfileData({
+        nickname: p.nickname,
+        gender: p.gender,
+        height: p.height,
+        weight: p.weight,
+        target_weight: p.target_weight ?? null,
+      });
+    }).catch(() => {});
+
+    // Meal history
+    getMealHistory().then(meals => {
+      setMealLogs(meals ?? []);
+      // Calculate streak — count consecutive days with at least one log
+      const days = new Set(meals.map((m: any) => new Date(m.logged_at).toDateString()));
+      let s = 0;
+      const today = new Date();
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        if (days.has(d.toDateString())) s++;
+        else break;
+      }
+      setStreak(s);
+    }).catch(() => {});
+
+    // Weight history
+    getWeightHistory(30).then(history => {
+      setWeightHistory(history ?? []);
+    }).catch(() => {});
+
+    // Weight target estimation
+    getWeightTarget().then(t => setWeightTarget(t)).catch(() => {});
+
+    // AI Tips
+    getAITips().then(tips => {
+      if (tips?.length) setAiTips(tips);
+    }).catch(() => {});
+
+    // Weekly stats for charts
+    getWeeklyStats().then(stats => setWeeklyStats(stats)).catch(() => {});
+
+    // Badges
+    getBadges().then(data => {
+      const map: Record<string, boolean> = {};
+      (data.badges ?? []).forEach((b: { key: string; achieved: boolean }) => {
+        map[b.key] = b.achieved;
+      });
+      setBadgeStates(map);
+    }).catch(() => {});
+  }, []);
 
   const openShareModal = useCallback((state: ShareModalState) => {
     setShareModal(state);
@@ -589,7 +678,7 @@ export default function ProfileScreen() {
   const handleProfileImagePress = useCallback(() => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Batal', 'Ambil Foto', 'Pilih dari Galeri', 'Hapus Foto'], destructiveButtonIndex: 3, cancelButtonIndex: 0 },
+        { options: ['Batal', 'Ambil Foto', 'Pilih dari Galeri', 'Hapus Foto'], destructiveButtonIndex: 3, cancelButtonIndex: 0, userInterfaceStyle: 'light' },
         (idx) => {
           if (idx === 1) launchCamera();
           else if (idx === 2) launchGallery();
@@ -601,8 +690,8 @@ export default function ProfileScreen() {
         { text: 'Ambil Foto', onPress: launchCamera },
         { text: 'Pilih dari Galeri', onPress: launchGallery },
         { text: 'Hapus Foto', style: 'destructive', onPress: () => setProfilePhoto(null) },
-        { text: 'Batal', style: 'cancel' },
-      ]);
+        { text: 'Batal', style: 'cancel', onPress: () => {} },
+      ], { cancelable: true });
     }
   }, []);
 
@@ -649,6 +738,23 @@ export default function ProfileScreen() {
           state={shareModal}
           shotRef={shotRef}
           onClose={() => setShareModal(null)}
+          weightData={(() => {
+            const months = Array.from({ length: 7 }, (_, i) => {
+              const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (6 - i));
+              return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }) };
+            });
+            const byMonth: Record<string, number[]> = {};
+            weightHistory.forEach(w => {
+              const d = new Date(w.logged_at);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              if (!byMonth[key]) byMonth[key] = [];
+              byMonth[key].push(parseFloat(String(w.weight)));
+            });
+            const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a, b) => a + b, 0) / byMonth[m.key].length : 0);
+            const nonZero = values.filter(v => v > 0);
+            return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays, color: DUMMY.weightData.color };
+          })()}
+          dates={weeklyStats?.dates ?? DUMMY.weekDates}
         />
       )}
 
@@ -659,6 +765,21 @@ export default function ProfileScreen() {
             ref={shotRef}
             type={shareModal.type}
             nutrient={shareModal.type === 'nutrient' ? shareModal.nutrient : undefined}
+            weightData={(() => {
+              const months = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (6 - i));
+                return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }) };
+              });
+              const byMonth: Record<string, number[]> = {};
+              weightHistory.forEach(w => {
+                const d = new Date(w.logged_at); const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (!byMonth[key]) byMonth[key] = []; byMonth[key].push(parseFloat(String(w.weight)));
+              });
+              const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a: number, b: number) => a + b, 0) / byMonth[m.key].length : 0);
+              const nonZero = values.filter((v: number) => v > 0);
+              return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays, color: DUMMY.weightData.color };
+            })()}
+            dates={weeklyStats?.dates ?? DUMMY.weekDates}
             remark={getRemarkForState(shareModal)}
             remarkColor={getRemarkColor(shareModal)}
             bgSource={captureBg}
@@ -689,21 +810,21 @@ export default function ProfileScreen() {
               {profilePhoto
                 ? <Image source={{ uri: profilePhoto }} style={styles.avatarImage} />
                 : <View style={styles.avatarPlaceholder}>
-                    {DUMMY.gender === 'male' ? <MaleIcon width={48} height={48} fill="#9EB4F0" /> : <FemaleIcon width={48} height={48} fill="#9EB4F0" />}
+                    {(profileData?.gender?.toLowerCase()?.includes('laki') ?? DUMMY.gender === 'male') ? <MaleIcon width={48} height={48} fill="#9EB4F0" /> : <FemaleIcon width={48} height={48} fill="#9EB4F0" />}
                   </View>
               }
             </View>
             <View style={styles.cameraBadge}><UpdateIcon width={18} height={18} fill="#024FE9" /></View>
           </TouchableOpacity>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{DUMMY.fullName}</Text>
+            <Text style={styles.profileName}>{profileData?.nickname ?? DUMMY.fullName}</Text>
             <View style={styles.profileStatsRow}>
-              {DUMMY.gender === 'male' ? <MaleIcon width={16} height={16} fill="#024FE9" /> : <FemaleIcon width={16} height={16} fill="#E91E63" />}
-              <Text style={styles.profileStats}> {DUMMY.height}cm | {DUMMY.currentWeight}kg</Text>
+              {(profileData?.gender?.toLowerCase()?.includes('laki') ?? DUMMY.gender === 'male') ? <MaleIcon width={16} height={16} fill="#024FE9" /> : <FemaleIcon width={16} height={16} fill="#E91E63" />}
+              <Text style={styles.profileStats}> {profileData?.height ?? DUMMY.height}cm | {profileData?.weight ?? DUMMY.currentWeight}kg</Text>
             </View>
           </View>
           <View style={styles.streakBadge}>
-            <Text style={styles.streakValue}>{DUMMY.streak}</Text>
+            <Text style={styles.streakValue}>{streak}</Text>
             <Text style={styles.streakLabel}>HARI{'\n'}log streak</Text>
           </View>
         </View>
@@ -718,7 +839,7 @@ export default function ProfileScreen() {
             <NIcon width={26} height={26} />
           </View>
           <FlatList
-            data={DUMMY.aiTips} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+            data={aiTips} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
             keyExtractor={(_, i) => `tip-${i}`}
             onMomentumScrollEnd={(e) => setAiTipIndex(Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH))}
             renderItem={({ item }) => (
@@ -733,7 +854,7 @@ export default function ProfileScreen() {
             )}
           />
           <View style={styles.dotsRow}>
-            {DUMMY.aiTips.map((_, i) => (
+            {aiTips.map((_, i) => (
               <View key={i} style={[styles.dot, i === aiTipIndex && styles.dotActive]} />
             ))}
           </View>
@@ -741,35 +862,52 @@ export default function ProfileScreen() {
 
         {/* ── Nutrient Tracker ─────────────────────────── */}
         <View style={styles.darkCard}>
-          <FlatList
-            data={DUMMY.nutrients} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
-            keyExtractor={(_, i) => `nutrient-${i}`}
-            onMomentumScrollEnd={(e) => setNutrientIndex(Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH))}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => openShareModal({ type: 'nutrient', nutrient: item })}
-                style={{ width: PAGE_WIDTH, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, flex: 1 }}
-              >
-                <View style={styles.nutrientHeader}>
-                  <View style={styles.nutrientTitleRow}>
-                    <CalorieIcon width={20} height={20} />
-                    <Text style={styles.nutrientTitle}> {item.label}</Text>
-                  </View>
-                  <View style={styles.nutrientGoalRow}>
-                    <Text style={styles.nutrientGoalBig}>{item.goal}</Text>
-                    <Text style={styles.nutrientGoalUnit}>{item.unit}</Text>
-                  </View>
+          {(() => {
+            const goals = weeklyStats?.goals;
+            const week = weeklyStats?.week ?? [];
+            const dates = weeklyStats?.dates ?? DUMMY.weekDates;
+            const realNutrients = goals ? [
+              { key: 'kalori',  label: 'Kalori',      unit: 'kkal/hari', goal: goals.calories, values: week.map((d: any) => d.calories), color: '#FF3E00' },
+              { key: 'karbo',   label: 'Karbohidrat', unit: 'gr/hari',   goal: goals.carbs,    values: week.map((d: any) => d.carbs),    color: '#024FE9' },
+              { key: 'protein', label: 'Protein',     unit: 'gr/hari',   goal: goals.protein,  values: week.map((d: any) => d.protein),  color: '#4CAF50' },
+              { key: 'lemak',   label: 'Lemak',       unit: 'gr/hari',   goal: goals.fat,      values: week.map((d: any) => d.fat),      color: '#ECB270' },
+              { key: 'gula',    label: 'Gula',        unit: 'gr/hari',   goal: goals.sugar,    values: week.map((d: any) => d.sugar),    color: '#E91E63' },
+              { key: 'serat',   label: 'Serat',       unit: 'gr/hari',   goal: goals.fiber,    values: week.map((d: any) => d.fiber),    color: '#9C27B0' },
+            ] : DUMMY.nutrients;
+            return (
+              <>
+                <FlatList
+                  data={realNutrients} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+                  keyExtractor={(_, i) => `nutrient-${i}`}
+                  onMomentumScrollEnd={(e) => setNutrientIndex(Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH))}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => openShareModal({ type: 'nutrient', nutrient: item })}
+                      style={{ width: PAGE_WIDTH, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, flex: 1 }}
+                    >
+                      <View style={styles.nutrientHeader}>
+                        <View style={styles.nutrientTitleRow}>
+                          <CalorieIcon width={20} height={20} />
+                          <Text style={styles.nutrientTitle}> {item.label}</Text>
+                        </View>
+                        <View style={styles.nutrientGoalRow}>
+                          <Text style={styles.nutrientGoalBig}>{item.goal}</Text>
+                          <Text style={styles.nutrientGoalUnit}>{item.unit}</Text>
+                        </View>
+                      </View>
+                      <BarChart nutrient={item} dates={dates} />
+                    </TouchableOpacity>
+                  )}
+                />
+                <View style={[styles.dotsRow, { paddingBottom: 10 }]}>
+                  {realNutrients.map((_, i) => (
+                    <View key={i} style={[styles.dot, i === nutrientIndex && styles.dotActive]} />
+                  ))}
                 </View>
-                <BarChart nutrient={item} dates={DUMMY.weekDates} />
-              </TouchableOpacity>
-            )}
-          />
-          <View style={[styles.dotsRow, { paddingBottom: 10 }]}>
-            {DUMMY.nutrients.map((_, i) => (
-              <View key={i} style={[styles.dot, i === nutrientIndex && styles.dotActive]} />
-            ))}
-          </View>
+              </>
+            );
+          })()}
         </View>
 
         {/* ── Berat Badan ───────────────────────────────── */}
@@ -782,11 +920,38 @@ export default function ProfileScreen() {
                   <Text style={styles.nutrientTitle}> Berat Badan</Text>
                 </View>
                 <Text style={styles.weightTargetLabel}>
-                  Target <Text style={styles.weightTargetValue}>{DUMMY.weightData.goalWeight}kg</Text>
+                  Target <Text style={styles.weightTargetValue}>{weightTarget?.target_weight?.toFixed(1) ?? DUMMY.weightData.goalWeight}kg</Text>
                 </Text>
               </View>
               <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
-                <WeightChart data={DUMMY.weightData} />
+                <WeightChart data={(() => {
+                  // Build last 7 months array
+                  const months = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(1);
+                    d.setMonth(d.getMonth() - (6 - i));
+                    return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }) };
+                  });
+                  // Group weight logs by month
+                  const byMonth: Record<string, number[]> = {};
+                  weightHistory.forEach(w => {
+                    const d = new Date(w.logged_at);
+                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    if (!byMonth[key]) byMonth[key] = [];
+                    byMonth[key].push(parseFloat(String(w.weight)));
+                  });
+                  // Average per month, 0 if no data
+                  const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a, b) => a + b, 0) / byMonth[m.key].length : 0);
+                  const nonZero = values.filter(v => v > 0);
+                  return {
+                    dates: months.map(m => m.label),
+                    values,
+                    startWeight: nonZero[0] ?? DUMMY.weightData.startWeight,
+                    goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight,
+                    targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays,
+                    color: DUMMY.weightData.color,
+                  };
+                })()} />
               </View>
             </View>
           </TouchableOpacity>
@@ -802,47 +967,73 @@ export default function ProfileScreen() {
             <View style={styles.daySelectorRow}>
               <TouchableOpacity><Text style={styles.dayArrow}>‹</Text></TouchableOpacity>
               <View style={styles.dayList}>
-                {DUMMY.logDays.map((d, i) => {
-                  const isActive = i === activeDayIndex;
-                  return (
-                    <TouchableOpacity key={i} style={styles.dayCol} onPress={() => setActiveDayIndex(i)}>
-                      <Text style={[styles.dayName, isActive && styles.dayNameActive]}>{d.day}</Text>
-                      <Text style={[styles.dayDate, isActive && styles.dayDateActive]}>{d.date}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {(() => {
+                  // Build last 7 days
+                  const tz = getDeviceTimezone();
+                  const days = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - (6 - i));
+                    return {
+                      day: d.toLocaleDateString('id-ID', { weekday: 'short', timeZone: tz }),
+                      date: d.toLocaleDateString('en-CA', { timeZone: tz }).split('-')[2],
+                      dateStr: d.toLocaleDateString('en-CA', { timeZone: tz }),
+                    };
+                  });
+                  return days.map((d, i) => {
+                    const isActive = i === activeDayIndex;
+                    return (
+                      <TouchableOpacity key={i} style={styles.dayCol} onPress={() => setActiveDayIndex(i)}>
+                        <Text style={[styles.dayName, isActive && styles.dayNameActive]}>{d.day}</Text>
+                        <Text style={[styles.dayDate, isActive && styles.dayDateActive]}>{d.date}</Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
               </View>
               <TouchableOpacity><Text style={styles.dayArrow}>›</Text></TouchableOpacity>
             </View>
           </View>
           <View style={styles.logEntriesCard}>
-            {DUMMY.logEntries.map((entry, i) => (
-              <View key={i} style={[styles.logEntry, i > 0 && styles.logEntryBorder]}>
-                <Text style={styles.logTime}>{entry.time}</Text>
-                <View style={styles.logEntryMid}>
-                  <Text style={styles.logName}>{entry.name} <Text style={styles.logCal}>~{entry.cal}kkal</Text></Text>
-                  <Text style={styles.logMacro}>Karbohidrat {entry.karbo}g | Protein {entry.protein}g | Lemak {entry.lemak}g</Text>
+            {(() => {
+              const tz = getDeviceTimezone();
+              const selectedDate = (() => {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - activeDayIndex));
+                return d.toLocaleDateString('en-CA', { timeZone: tz });
+              })();
+              const dayLogs = mealLogs.filter(m => {
+                return new Date(m.logged_at).toLocaleDateString('en-CA', { timeZone: tz }) === selectedDate;
+              });
+              if (dayLogs.length === 0) {
+                return (
+                  <View style={styles.logEntry}>
+                    <Text style={{ fontFamily: FONTS.regular, fontSize: 13, color: '#999', textAlign: 'center', flex: 1, paddingVertical: 8 }}>
+                      Belum ada log makanan untuk hari ini.
+                    </Text>
+                  </View>
+                );
+              }
+              return dayLogs.map((entry, i) => (
+                <View key={entry.id ?? i} style={[styles.logEntry, i > 0 && styles.logEntryBorder]}>
+                  <Text style={styles.logTime}>
+                    {new Date(entry.logged_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  <View style={styles.logEntryMid}>
+                    <Text style={styles.logName}>{entry.food_name} <Text style={styles.logCal}>~{Math.round(entry.calories)}kkal</Text></Text>
+                    <Text style={styles.logMacro}>Karbo {Math.round(entry.carbs)}g | Protein {Math.round(entry.protein)}g | Lemak {Math.round(entry.fat)}g</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.logEditBtn}
+                    onPress={() => router.push({
+                      pathname: '/(app)/result-screen',
+                      params: { data: JSON.stringify(entry), viewMode: 'profile' },
+                    })}
+                  >
+                    <NotesIcon width={22} height={22} fill="rgba(0,0,0,0.25)" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.logEditBtn}
-                  onPress={() => router.push({
-                    pathname: '/(app)/result-screen',
-                    params: {
-                      name: entry.name,
-                      cal: entry.cal,
-                      karbo: entry.karbo,
-                      protein: entry.protein,
-                      lemak: entry.lemak,
-                      time: entry.time,
-                      viewMode: 'profile', 
-                      // data: JSON.stringify(mealLog)
-                    },
-                  })}
-                >
-                  <NotesIcon width={22} height={22} fill="rgba(0,0,0,0.25)" />
-                </TouchableOpacity>
-              </View>
-            ))}
+              ));
+            })()}
           </View>
         </View>
 
@@ -854,16 +1045,19 @@ export default function ProfileScreen() {
               <Text style={styles.badgeTitle}> Badges</Text>
             </View>
             <Text style={styles.badgeCount}>
-              <Text style={styles.badgeCountNum}>{DUMMY.badges.filter(b => b.achieved).length}/{DUMMY.badges.length}</Text>
+              <Text style={styles.badgeCountNum}>{DUMMY.badges.filter(b => badgeStates[b.key] ?? b.achieved).length}/{DUMMY.badges.length}</Text>
               {' '}tercapai
             </Text>
           </View>
           <View style={styles.badgeGrid}>
-            {DUMMY.badges.map((badge) => (
-              <View key={badge.key} style={styles.badgeItem}>
-                <Image source={badge.achieved ? badge.image : badge.imageOff} style={styles.badgeImage} resizeMode="contain" />
-              </View>
-            ))}
+            {DUMMY.badges.map((badge) => {
+              const achieved = badgeStates[badge.key] ?? badge.achieved;
+              return (
+                <View key={badge.key} style={styles.badgeItem}>
+                  <Image source={achieved ? badge.image : badge.imageOff} style={styles.badgeImage} resizeMode="contain" />
+                </View>
+              );
+            })}
           </View>
         </View>
         
