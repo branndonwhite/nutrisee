@@ -59,7 +59,8 @@
         {
           "cameraPermission": "Allow Nutrisee to access your camera to scan meals."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
