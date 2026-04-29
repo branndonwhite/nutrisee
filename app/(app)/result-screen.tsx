@@ -11,7 +11,6 @@ import {
   FlatList
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Location from 'expo-location';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, LocationIcon } from '../../assets/images/icon';
 import { logMeal } from '../../api/meals';
@@ -58,7 +57,7 @@ export default function Scanreen() {
   const macroFlatListRef = useRef<FlatList>(null);
   const [macroCardWidth, setMacroCardWidth] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [locationName, setLocationName] = useState('Mendapatkan lokasi...');
+  const [locationName, setLocationName] = useState(passed.location ?? '');
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [calorieGoal, setCalorieGoal] = useState(2000);
 
@@ -89,25 +88,6 @@ export default function Scanreen() {
 
   // Fetch location and daily stats on mount
   useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({});
-          const geocode = await Location.reverseGeocodeAsync(loc.coords);
-          if (geocode[0]) {
-            const { district, subregion, region } = geocode[0];
-            setLocationName(`${district ?? subregion ?? ''},
-${region ?? ''}.`);
-          }
-        } else {
-          setLocationName('Lokasi tidak diizinkan');
-        }
-      } catch {
-        setLocationName('Lokasi tidak tersedia');
-      }
-    })();
-
     (async () => {
       try {
         const stats = await getDailyStats();
@@ -290,13 +270,12 @@ ${region ?? ''}.`);
               <Text style={styles.submitLabel}>Progress Kalori Hari Ini</Text>
               {/* Progress bar */}
               <View style={styles.progressBarTrack}>
-                <View style={[styles.progressBarFill, { flex: calorieProgress }]}>
-                  <Text style={styles.progressConsumed}>
-                    {Math.round(caloriesConsumed + result.calories)}
-                    <Text style={styles.progressGoal}> / {calorieGoal}kkal</Text>
-                  </Text>
+                <View style={[styles.progressBarFill, { flex: Math.max(calorieProgress, 0.001) }]}>
+                  <Text style={styles.progressConsumed}>{Math.round(caloriesConsumed + result.calories)} <Text style={styles.progressGoalLabel}>masuk</Text></Text>
                 </View>
-                <View style={{ flex: 1 - calorieProgress }} />
+                <View style={[styles.progressBarRemaining, { flex: Math.max(1 - calorieProgress, 0.001) }]}>
+                  <Text style={styles.progressRemainingValue}>{Math.max(0, Math.round(calorieGoal - caloriesConsumed - result.calories))} <Text style={styles.progressRemainingLabel}>tersisa</Text></Text>
+                </View>
               </View>
             </View>
 
@@ -635,17 +614,37 @@ const styles = StyleSheet.create({
     backgroundColor: BLUE,
     borderRadius: 25,
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  progressBarRemaining: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
   },
   progressConsumed: {
     fontFamily: FONTS.extraBold,
-    fontSize: 11,
+    fontSize: 12,
     color: WHITE,
+    lineHeight: 14,
   },
-  progressGoal: {
+  progressGoalLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    color: WHITE,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 12,
+  },
+  progressRemainingValue: {
+    fontFamily: FONTS.extraBold,
+    fontSize: 12,
+    color: '#222',
+    lineHeight: 14,
+  },
+  progressRemainingLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#888',
+    lineHeight: 12,
   },
   submitButton: {
     backgroundColor: BLUE,

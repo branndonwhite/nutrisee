@@ -659,7 +659,12 @@ export default function ProfileScreen() {
     }).catch(() => {});
 
     // Weekly stats for charts
-    getWeeklyStats().then(stats => setWeeklyStats(stats)).catch(() => {});
+    getWeeklyStats().then(stats => {
+      console.log('weeklyStats:', JSON.stringify(stats));
+      setWeeklyStats(stats);
+    }).catch((err) => {
+      console.log('getWeeklyStats error:', err?.response?.status, err?.message);
+    });
 
     // Badges
     getBadges().then(data => {
