@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
-import { completeProfile } from "../../api/auth";
+import { authenticate, completeProfile } from "../../api/auth";
 import { logWeight, updateWeightGoal, getWeightGoal } from '../../api/weight';
 import { BackArrowIcon, NextArrowIcon } from "../../assets/images/icon";
 import { COLORS } from "../../constants/colors";
@@ -216,6 +216,10 @@ export default function WeightScreen() {
     if (isRegisterGoal) {
       setLoading(true);
       try {
+        // Step 1: Authenticate (register if new user)
+        await authenticate(data.email!, data.password!);
+
+        // Step 2: Complete profile (token is now stored)
         await completeProfile({
           nickname: data.nickname!,
           gender: data.gender!,
