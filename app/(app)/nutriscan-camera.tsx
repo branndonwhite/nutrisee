@@ -7,7 +7,6 @@ import {
   Image,
   Animated,
 } from 'react-native';
-import { Audio } from 'expo-av';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -20,6 +19,7 @@ import GalleryIcon from '../../assets/images/icon/GalleryIcon';
 import ScanLoadingOverlay from '../../components/ScanLoadingOverlay';
 import BlurContainer from '../../components/BlurContainer';
 import { analyzeMealImage } from '../../api/meals';
+import * as Location from 'expo-location';
 
 const WHITE = '#FFFFFF';
 const BLACK = '#000000';
@@ -93,7 +93,6 @@ export default function NutriScanCameraScreen() {
       Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
     ]).start();
 
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
     if (photo?.uri) {
       setCapturedPhoto(photo.uri);
@@ -110,13 +109,27 @@ export default function NutriScanCameraScreen() {
 
       setLoadingStep(2);
 
+      // Fetch location in parallel with API call
+      let locationName = '';
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({});
+          const geocode = await Location.reverseGeocodeAsync(loc.coords);
+          if (geocode[0]) {
+            const { district, subregion, region } = geocode[0];
+            locationName = `${district ?? subregion ?? ''}, ${region ?? ''}.`;
+          }
+        }
+      } catch { /* location optional */ }
+
       // Step 2: Send to API
       const { nutrition, image_url } = await analyzeMealImage(base64);
 
       router.push({
         pathname: '/(app)/result-screen',
         params: {
-          data: JSON.stringify({ ...nutrition, image_url, imageUri: uri }),
+          data: JSON.stringify({ ...nutrition, image_url, imageUri: uri, location: locationName }),
         },
       });
     } catch (err: any) {

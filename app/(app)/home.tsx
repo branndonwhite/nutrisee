@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   PanResponder,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import BlurContainer from '../../components/BlurContainer';
@@ -43,26 +43,34 @@ export default function HomeScreen() {
   const [aiOverview, setAiOverview] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsData, overviewData] = await Promise.all([
-          getDailyStats(),
-          getAIOverview(),
-        ]);
-        setStats(statsData);
-        setAiOverview(overviewData);
-      } catch (err: any) {
-        // Add these lines:
-        console.error('Home fetch error status:', err?.response?.status);
-        console.error('Home fetch error data:', JSON.stringify(err?.response?.data));
-        console.error('Home fetch error message:', err?.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      const fetchData = async () => {
+        try {
+          // Fetch independently so a cache error on AI overview
+          // doesn't block the calorie/nutrient stats from updating
+          const [statsResult, overviewResult] = await Promise.allSettled([
+            getDailyStats(),
+            getAIOverview(),
+          ]);
+          if (!active) return;
+          if (statsResult.status === 'fulfilled') {
+            setStats(statsResult.value);
+          } else {
+            console.error('getDailyStats error:', statsResult.reason?.response?.data, statsResult.reason?.message);
+          }
+          if (overviewResult.status === 'fulfilled') setAiOverview(overviewResult.value);
+          else console.error('getAIOverview error:', overviewResult.reason?.message);
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+      fetchData();
+      return () => { active = false; };
+    }, [])
+  );
 
   const todayStr = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -256,7 +264,7 @@ export default function HomeScreen() {
             <Text style={styles.calorieIn}>{caloriesIn}</Text>
             <Text style={styles.calorieInLabel}>masuk</Text>
           </View>
-          <View style={styles.calorieRemaining}>
+          <View style={[styles.calorieRemaining, { flex: safeCalorieRemaining }]}>
             <Text style={styles.calorieLeftValue}>{caloriesLeft}</Text>
             <Text style={styles.calorieLeftLabel}>tersisa</Text>
           </View>
@@ -674,7 +682,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calorieRemaining: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

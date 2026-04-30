@@ -21,6 +21,7 @@ import { FONTS } from "../../constants/fonts";
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { analyzeTextMeal, analyzeMealImage } from '../../api/meals';
+import * as Location from 'expo-location';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const BLUE = "#024FE9";
@@ -121,6 +122,20 @@ export default function ScanTextScreen() {
 
       setLoadingStep(2);
 
+      // Fetch location at scan time
+      let locationName = '';
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({});
+          const geocode = await Location.reverseGeocodeAsync(loc.coords);
+          if (geocode[0]) {
+            const { district, subregion, region } = geocode[0];
+            locationName = `${district ?? subregion ?? ''}, ${region ?? ''}.`;
+          }
+        }
+      } catch { /* location optional */ }
+
       // ← rename here to avoid conflict with the `description` state
       const { nutrition, description: savedDescription } = await analyzeTextMeal(description, image_url);
 
@@ -132,6 +147,7 @@ export default function ScanTextScreen() {
             description: savedDescription,
             image_url: image_url ?? undefined,
             imageUri: selectedImage ?? undefined,
+            location: locationName,
           }),
         },
       });

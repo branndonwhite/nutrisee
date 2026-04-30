@@ -28,12 +28,13 @@ export const logMeal = async (nutrition: {
   cholesterol: number;
   image_url?: string;
   description?: string;
+  location?: string;
 }) => {
   const response = await client.post('/meals/log', nutrition);
   return response.data.meal;
 };
 
-export const getMealHistory = async () => {
-  const response = await client.get('/meals/history');
+export const getMealHistory = async (limit: number = 20) => {
+  const response = await client.get(`/meals/history?limit=${limit}`);
   return response.data.meals;
 };
