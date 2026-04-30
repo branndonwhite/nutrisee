@@ -101,7 +101,6 @@ interface WeightData {
 type ShareModalState =
   | { type: 'nutrient'; nutrient: Nutrient; image_url?: string }
   | { type: 'weight'; image_url?: string }
-  | { type: 'weight' };
 
 // ─── Dummy data ───────────────────────────────────────────────────────────────
 const DUMMY = {

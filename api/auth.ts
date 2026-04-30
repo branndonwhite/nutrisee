@@ -5,11 +5,9 @@ export const authenticate = async (email: string, password: string) => {
   const response = await client.post('/auth/authenticate', { email, password });
   const { token, user, isNewUser, hasProfile } = response.data;
 
-  console.log('Token received from API:', token ? `${token.slice(0, 20)}...` : 'NULL');
   await SecureStore.setItemAsync('token', token);
   
   const verify = await SecureStore.getItemAsync('token');
-  console.log('Token verified in SecureStore:', verify ? `${verify.slice(0, 20)}...` : 'NULL');
 
   return { user, isNewUser, hasProfile };
 };
