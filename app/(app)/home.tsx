@@ -56,8 +56,11 @@ export default function HomeScreen() {
             getAIOverview(),
           ]);
           if (!active) return;
-          if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-          else console.error('getDailyStats error:', statsResult.reason?.message);
+          if (statsResult.status === 'fulfilled') {
+            setStats(statsResult.value);
+          } else {
+            console.error('getDailyStats error:', statsResult.reason?.response?.data, statsResult.reason?.message);
+          }
           if (overviewResult.status === 'fulfilled') setAiOverview(overviewResult.value);
           else console.error('getAIOverview error:', overviewResult.reason?.message);
         } finally {
@@ -261,7 +264,7 @@ export default function HomeScreen() {
             <Text style={styles.calorieIn}>{caloriesIn}</Text>
             <Text style={styles.calorieInLabel}>masuk</Text>
           </View>
-          <View style={styles.calorieRemaining}>
+          <View style={[styles.calorieRemaining, { flex: safeCalorieRemaining }]}>
             <Text style={styles.calorieLeftValue}>{caloriesLeft}</Text>
             <Text style={styles.calorieLeftLabel}>tersisa</Text>
           </View>
@@ -679,7 +682,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calorieRemaining: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -19,7 +19,6 @@ import GalleryIcon from '../../assets/images/icon/GalleryIcon';
 import ScanLoadingOverlay from '../../components/ScanLoadingOverlay';
 import BlurContainer from '../../components/BlurContainer';
 import { analyzeMealImage } from '../../api/meals';
-import { setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 
 const WHITE = '#FFFFFF';
@@ -94,7 +93,6 @@ export default function NutriScanCameraScreen() {
       Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
     ]).start();
 
-    try { await setAudioModeAsync({ playsInSilentMode: true }); } catch {}
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
     if (photo?.uri) {
       setCapturedPhoto(photo.uri);

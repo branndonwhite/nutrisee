@@ -15,7 +15,7 @@ import {
   Share,
   StatusBar,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -67,7 +67,8 @@ const BAR_CHART_LABEL_H = 36;
 const LINE_H = 120;
 const LINE_W = PAGE_CONTENT_WIDTH;
 
-const SHARE_CARD_W = SCREEN_WIDTH - 64;
+const SHARE_CARD_W = SCREEN_WIDTH - 48;  // card width
+const SHARE_CARD_H = Math.round(SHARE_CARD_W * 16 / 9); // 9:16 ratio
 
 const BADGE_GAP = 10;
 const BADGE_COL_W = (PAGE_CONTENT_WIDTH - BADGE_GAP * 2) / 3;
@@ -98,7 +99,8 @@ interface WeightData {
 }
 
 type ShareModalState =
-  | { type: 'nutrient'; nutrient: Nutrient }
+  | { type: 'nutrient'; nutrient: Nutrient; image_url?: string }
+  | { type: 'weight'; image_url?: string }
   | { type: 'weight' };
 
 // ─── Dummy data ───────────────────────────────────────────────────────────────
@@ -246,7 +248,7 @@ const BarChart: React.FC<{ nutrient: Nutrient; dates: string[]; contentWidth?: n
 const bStyles = StyleSheet.create({
   root: { marginTop: 12, height: BAR_CHART_HEIGHT + BAR_CHART_LABEL_H + 28, position: 'relative' },
   goalLineRow: { position: 'absolute', right: 0, flexDirection: 'row', alignItems: 'center', zIndex: 2 },
-  goalLabel: { position: 'absolute', left: 0, fontFamily: FONTS.bold, fontSize: 11, color: '#FF3E00', zIndex: 3, backgroundColor: '#1A1A1A', paddingHorizontal: 2, borderRadius: 4 },
+  goalLabel: { position: 'absolute', left: 0, fontFamily: FONTS.bold, fontSize: 11, color: '#FF3E00', zIndex: 3 },
   goalDash: { flex: 1, height: 0, borderTopWidth: 1.5, borderColor: '#FF3E00', borderStyle: 'dashed' },
   barsArea: { position: 'absolute', bottom: 0, right: 0, height: BAR_CHART_HEIGHT + BAR_CHART_LABEL_H + 28, flexDirection: 'row', alignItems: 'flex-end' },
   col: { flex: 1, alignItems: 'center' },
@@ -346,7 +348,7 @@ const WeightChart: React.FC<{ data: WeightData; lineW?: number }> = ({ data, lin
 };
 
 const wStyles = StyleSheet.create({
-  yLabel: { fontFamily: FONTS.bold, fontSize: 12, position: 'absolute', left: 0, backgroundColor: '#1A1A1A', paddingHorizontal: 2, borderRadius: 4 },
+  yLabel: { fontFamily: FONTS.bold, fontSize: 12, position: 'absolute', left: 0 },
   refLine: { position: 'absolute', left: 0, right: 0, height: 0, borderTopWidth: 1.5, borderStyle: 'dashed' },
   segment: { position: 'absolute', height: 2.5, borderRadius: 2, transformOrigin: 'left center' },
   dot: { position: 'absolute' },
@@ -431,17 +433,27 @@ const CaptureCard = React.forwardRef<ViewShot | null, {
 
   return (
     <ViewShot ref={ref} options={{ format: 'jpg', quality: 0.95 }}>
-      <View style={[shareStyles.captureRoot, { width: cardW }]}>
-        <Image source={bgSource} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <View style={{ width: cardW, height: SHARE_CARD_H, overflow: 'hidden' }}>
+        {/* Zoomed background image */}
+        <Image
+          source={bgSource}
+          style={[StyleSheet.absoluteFill, { transform: [{ scale: 1.2 }] }]}
+          resizeMode="cover"
+          blurRadius={Platform.OS === 'android' ? 10 : 0}
+        />
+        {/* Light blur overlay */}
         {Platform.OS === 'ios'
-          ? <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-          : <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]} />
+          ? <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
+          : <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
         }
-        <View style={[shareStyles.captureInnerCard, { width: cardW - 24 }]}>
-          <ChartCardContent {...props} />
-        </View>
-        <View style={shareStyles.logoRow}>
-          <Image source={LOGO_WHITE} style={shareStyles.logoImg} resizeMode="contain" />
+        {/* Content centered vertically */}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 24, paddingHorizontal: 16 }}>
+          <View style={[shareStyles.captureInnerCard, { width: cardW - 40 }]}>
+            <ChartCardContent {...props} cardW={cardW - 40} />
+          </View>
+          <View style={shareStyles.logoRow}>
+            <Image source={LOGO_WHITE} style={shareStyles.logoImg} resizeMode="contain" />
+          </View>
         </View>
       </View>
     </ViewShot>
@@ -554,19 +566,25 @@ const shareStyles = StyleSheet.create({
 
   modalCard: {
     backgroundColor: 'rgba(26,26,26,0.88)',
-    borderRadius: 20, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
 
   captureRoot: {
     overflow: 'hidden',
-    paddingVertical: 28, paddingHorizontal: 12,
-    alignItems: 'center', gap: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
   },
   captureInnerCard: {
     backgroundColor: 'rgba(15,15,15,0.65)',
-    borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
 
   innerCardHeader: {
@@ -594,8 +612,31 @@ export default function ProfileScreen() {
   const [aiTipIndex, setAiTipIndex] = useState(0);
   const [nutrientIndex, setNutrientIndex] = useState(0);
   const [activeDayIndex, setActiveDayIndex] = useState(6); // 6 = today (last in 7-day array)
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = last week, etc.
+  const [monthOffset, setMonthOffset] = useState(0); // 0 = current 7 months, 1 = 7 months earlier
+
+  const handlePrevWeek = () => {
+    setWeekOffset(prev => prev + 1);
+    setActiveDayIndex(6);
+  };
+  const handleNextWeek = () => {
+    if (weekOffset === 0) return;
+    setWeekOffset(prev => prev - 1);
+    setActiveDayIndex(6);
+  };
+  const handlePrevMonth = () => setMonthOffset(prev => prev + 1);
+  const handleNextMonth = () => {
+    if (monthOffset === 0) return;
+    setMonthOffset(prev => prev - 1);
+  };
   const [shareModal, setShareModal] = useState<ShareModalState | null>(null);
   const [captureBg] = useState(() => TEMP_BACKGROUNDS[Math.floor(Math.random() * TEMP_BACKGROUNDS.length)]);
+
+  const getRandomMealImage = () => {
+    const withImages = mealLogs.filter(m => m.image_url);
+    if (withImages.length === 0) return null;
+    return withImages[Math.floor(Math.random() * withImages.length)].image_url;
+  };
 
   // shotRef lives in main screen so CaptureCard is always mounted outside Modal
   const shotRef = useRef<ViewShot | null>(null);
@@ -616,7 +657,7 @@ export default function ProfileScreen() {
   const [weeklyStats, setWeeklyStats] = useState<{ week: any[]; dates: string[]; goals: any } | null>(null);
   const [badgeStates, setBadgeStates] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     // Profile + avatar
     getProfile().then(p => {
       if (p.avatar_url) setProfilePhoto(p.avatar_url);
@@ -630,7 +671,7 @@ export default function ProfileScreen() {
     }).catch(() => {});
 
     // Meal history
-    getMealHistory().then(meals => {
+    getMealHistory(100).then(meals => {
       setMealLogs(meals ?? []);
       // Calculate streak — count consecutive days with at least one log
       const days = new Set(meals.map((m: any) => new Date(m.logged_at).toDateString()));
@@ -643,7 +684,8 @@ export default function ProfileScreen() {
         else break;
       }
       setStreak(s);
-    }).catch(() => {});
+    }).catch(err => {
+    });
 
     // Weight history
     getWeightHistory(30).then(history => {
@@ -660,10 +702,8 @@ export default function ProfileScreen() {
 
     // Weekly stats for charts
     getWeeklyStats().then(stats => {
-      console.log('weeklyStats:', JSON.stringify(stats));
       setWeeklyStats(stats);
     }).catch((err) => {
-      console.log('getWeeklyStats error:', err?.response?.status, err?.message);
     });
 
     // Badges
@@ -674,7 +714,7 @@ export default function ProfileScreen() {
       });
       setBadgeStates(map);
     }).catch(() => {});
-  }, []);
+  }, []));
 
   const openShareModal = useCallback((state: ShareModalState) => {
     setShareModal(state);
@@ -787,7 +827,11 @@ export default function ProfileScreen() {
             dates={weeklyStats?.dates ?? DUMMY.weekDates}
             remark={getRemarkForState(shareModal)}
             remarkColor={getRemarkColor(shareModal)}
-            bgSource={captureBg}
+            bgSource={
+              shareModal?.image_url
+                ? { uri: shareModal.image_url }
+                : captureBg
+            }
             cardW={SHARE_CARD_W}
           />
         </View>
@@ -888,7 +932,11 @@ export default function ProfileScreen() {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       activeOpacity={0.85}
-                      onPress={() => openShareModal({ type: 'nutrient', nutrient: item })}
+                      onPress={() => openShareModal({
+                          type: 'nutrient',
+                          nutrient: item,
+                          image_url: getRandomMealImage() ?? undefined,
+                        })}
                       style={{ width: PAGE_WIDTH, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, flex: 1 }}
                     >
                       <View style={styles.nutrientHeader}>
@@ -917,7 +965,7 @@ export default function ProfileScreen() {
 
         {/* ── Berat Badan ───────────────────────────────── */}
         <View style={styles.darkCard}>
-          <TouchableOpacity activeOpacity={0.85} onPress={() => openShareModal({ type: 'weight' })}>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => openShareModal({ type: 'weight', image_url: getRandomMealImage() ?? undefined })}>
             <View style={styles.darkCard}>
               <View style={styles.weightHeader}>
                 <View style={styles.weightTitleRow}>
@@ -928,16 +976,15 @@ export default function ProfileScreen() {
                   Target <Text style={styles.weightTargetValue}>{weightTarget?.target_weight?.toFixed(1) ?? DUMMY.weightData.goalWeight}kg</Text>
                 </Text>
               </View>
-              <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+              <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
                 <WeightChart data={(() => {
-                  // Build last 7 months array
+                  // Build 7 months window based on monthOffset
                   const months = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date();
                     d.setDate(1);
-                    d.setMonth(d.getMonth() - (6 - i));
+                    d.setMonth(d.getMonth() - (6 - i) - (monthOffset * 7));
                     return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }) };
                   });
-                  // Group weight logs by month
                   const byMonth: Record<string, number[]> = {};
                   weightHistory.forEach(w => {
                     const d = new Date(w.logged_at);
@@ -945,7 +992,6 @@ export default function ProfileScreen() {
                     if (!byMonth[key]) byMonth[key] = [];
                     byMonth[key].push(parseFloat(String(w.weight)));
                   });
-                  // Average per month, 0 if no data
                   const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a, b) => a + b, 0) / byMonth[m.key].length : 0);
                   const nonZero = values.filter(v => v > 0);
                   return {
@@ -957,6 +1003,26 @@ export default function ProfileScreen() {
                     color: DUMMY.weightData.color,
                   };
                 })()} />
+              </View>
+              {/* ── Month navigation ── */}
+              <View style={styles.monthNavRow}>
+                <TouchableOpacity onPress={handlePrevMonth} style={styles.monthNavBtn}>
+                  <Text style={[styles.dayArrow, { color: 'rgba(255,255,255,0.7)', fontSize: 24 }]}>‹</Text>
+                </TouchableOpacity>
+                <Text style={styles.monthNavLabel}>
+                  {(() => {
+                    const start = new Date();
+                    start.setDate(1);
+                    start.setMonth(start.getMonth() - 6 - (monthOffset * 7));
+                    const end = new Date();
+                    end.setDate(1);
+                    end.setMonth(end.getMonth() - (monthOffset * 7));
+                    return `${start.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })} – ${end.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`;
+                  })()}
+                </Text>
+                <TouchableOpacity onPress={handleNextMonth} disabled={monthOffset === 0} style={styles.monthNavBtn}>
+                  <Text style={[styles.dayArrow, { color: 'rgba(255,255,255,0.7)', fontSize: 24 }, monthOffset === 0 && { opacity: 0.25 }]}>›</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableOpacity>
@@ -970,14 +1036,15 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.daySelectorContainer}>
             <View style={styles.daySelectorRow}>
-              <TouchableOpacity><Text style={styles.dayArrow}>‹</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handlePrevWeek}>
+                <Text style={styles.dayArrow}>‹</Text>
+              </TouchableOpacity>
               <View style={styles.dayList}>
                 {(() => {
-                  // Build last 7 days
                   const tz = getDeviceTimezone();
                   const days = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date();
-                    d.setDate(d.getDate() - (6 - i));
+                    d.setDate(d.getDate() - (6 - i) - (weekOffset * 7));
                     return {
                       day: d.toLocaleDateString('id-ID', { weekday: 'short', timeZone: tz }),
                       date: d.toLocaleDateString('en-CA', { timeZone: tz }).split('-')[2],
@@ -995,7 +1062,9 @@ export default function ProfileScreen() {
                   });
                 })()}
               </View>
-              <TouchableOpacity><Text style={styles.dayArrow}>›</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handleNextWeek} disabled={weekOffset === 0}>
+                <Text style={[styles.dayArrow, weekOffset === 0 && { opacity: 0.25 }]}>›</Text>
+              </TouchableOpacity>
             </View>
           </View>
           <View style={styles.logEntriesCard}>
@@ -1003,7 +1072,7 @@ export default function ProfileScreen() {
               const tz = getDeviceTimezone();
               const selectedDate = (() => {
                 const d = new Date();
-                d.setDate(d.getDate() - (6 - activeDayIndex));
+                d.setDate(d.getDate() - (6 - activeDayIndex) - (weekOffset * 7));
                 return d.toLocaleDateString('en-CA', { timeZone: tz });
               })();
               const dayLogs = mealLogs.filter(m => {
@@ -1150,6 +1219,9 @@ const styles = StyleSheet.create({
   weightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
   weightTitleRow: { flexDirection: 'row', alignItems: 'center' },
   weightTargetLabel: { fontFamily: FONTS.regular, fontSize: 17, color: '#fff' },
+  monthNavRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
+  monthNavBtn: { padding: 8 },
+  monthNavLabel: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.6)', flex: 1, textAlign: 'center' },
   weightTargetValue: { fontFamily: FONTS.extraBold, fontSize: 24, color: '#fff' },
 
   logCard: { backgroundColor: '#024FE9', borderRadius: 20, paddingTop: 16, paddingBottom: 16, overflow: 'hidden' },

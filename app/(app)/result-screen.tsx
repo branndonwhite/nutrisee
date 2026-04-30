@@ -57,7 +57,6 @@ export default function Scanreen() {
   const macroFlatListRef = useRef<FlatList>(null);
   const [macroCardWidth, setMacroCardWidth] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [locationName, setLocationName] = useState(passed.location ?? '');
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [calorieGoal, setCalorieGoal] = useState(2000);
 
@@ -77,7 +76,7 @@ export default function Scanreen() {
     vitaminD:      passed.vitamin_d    ?? passed.vitaminD    ?? 0,
     description:   passed.description  ?? undefined,
     imageUri:      passed.image_url    ?? passed.imageUri    ?? undefined,
-    location:      locationName,
+    location:      passed.location ?? '',
     time:          new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.'),
     date:          new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
     caloriesConsumed,
@@ -301,6 +300,7 @@ export default function Scanreen() {
                     cholesterol: result.cholesterol,
                     image_url:   passed.image_url   ?? undefined,
                     description: passed.description ?? undefined,
+                    location:    passed.location    ?? undefined,
                   });
                   router.replace('/(app)/success-splash?message=Sukses+mencatat+makananmu!&dest=/(app)/home');
                 } catch (err) {
