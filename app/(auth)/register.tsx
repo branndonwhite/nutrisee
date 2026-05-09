@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRegister } from '../../context/RegisterContext';
+import { useRegister, seedPreloadedData } from '../../context/RegisterContext';
+import * as SecureStore from 'expo-secure-store';
+import { getOnboardingRoute } from '../../utils/onboarding';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { authenticate } from '../../api/auth';
@@ -37,11 +39,25 @@ export default function RegisterScreen() {
 
       if (!isNewUser && hasProfile) {
         // Existing user with complete profile → go to app
+        await SecureStore.setItemAsync('onboarding_complete', 'true');
         router.replace('/(app)/home');
       } else {
-        // New user OR existing user without profile → go through onboarding
-        setData({ email, password });
-        router.push('/(auth)/personal-info');
+        // Read any previously saved onboarding progress BEFORE calling setData
+        // so the email/password merge doesn't wipe prior fields.
+        const savedJson = await SecureStore.getItemAsync('register_data');
+        const savedData: Record<string, unknown> = savedJson
+          ? JSON.parse(savedJson)
+          : {};
+
+        const merged = { ...savedData, email, password };
+
+        // Seed the module-level preload synchronously so the next screen's
+        // RegisterProvider starts with this data — no async race.
+        seedPreloadedData(merged as any);
+        setData(merged as any);
+
+        // Route to wherever they left off, not always to the first screen.
+        router.push(getOnboardingRoute(merged) as any);
       }
     } catch (err: any) {
       console.log('authenticate error:', JSON.stringify(err?.response?.data));
