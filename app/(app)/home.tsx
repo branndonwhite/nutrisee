@@ -36,6 +36,7 @@ const CARD_GAP = 24;
 
 const TOTAL_CARDS = 3;
 
+
 export default function HomeScreen() {
   const router = useRouter();
   const [showScanModal, setShowScanModal] = useState(false);
@@ -88,6 +89,8 @@ export default function HomeScreen() {
 
   // The single translateY driving all card movement
   const translateY = useRef(new Animated.Value(0)).current;
+  // Fade cards in only after initial position is set — prevents visible jump on first paint
+  const cardStackOpacity = useRef(new Animated.Value(0)).current;
 
   // ─── Snap position calculation ──────────────────────────────────
   // translateY needed to center card[i] in the viewport:
@@ -113,11 +116,20 @@ export default function HomeScreen() {
       const positions = buildSnapPositions(cardHeightsRef.current);
       snapPositionsRef.current = positions;
       setSnapPositions(positions);
-      // Only set initial position on first build
+      // Always re-centre the currently focused card.
+      // This covers both the initial layout and subsequent data-driven
+      // height changes (e.g. AI text loading in after the first paint).
+      translateY.setValue(positions[currentIndexRef.current]);
       if (measuredRef.current < TOTAL_CARDS) {
-        translateY.setValue(positions[0]);
+        // First time all cards are measured — fade in so the user never
+        // sees the cards at the wrong (pre-snap) position.
+        measuredRef.current = TOTAL_CARDS;
+        Animated.timing(cardStackOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }).start();
       }
-      measuredRef.current = TOTAL_CARDS;
     }
   };
 
@@ -411,7 +423,7 @@ export default function HomeScreen() {
       <View style={styles.gestureArea} {...panResponder.panHandlers}>
         {/* The card stack — translated as one unit */}
         <Animated.View
-          style={[styles.cardStack, { transform: [{ translateY }] }]}
+          style={[styles.cardStack, { transform: [{ translateY }], opacity: cardStackOpacity }]}
         >
           {renderAICard()}
           {renderCalorieCard()}
