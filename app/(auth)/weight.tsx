@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
 import { authenticate, completeProfile } from "../../api/auth";
+import * as SecureStore from 'expo-secure-store';
 import { logWeight, updateWeightGoal, getWeightGoal } from '../../api/weight';
 import { BackArrowIcon, NextArrowIcon } from "../../assets/images/icon";
 import { COLORS } from "../../constants/colors";
@@ -216,10 +217,12 @@ export default function WeightScreen() {
     if (isRegisterGoal) {
       setLoading(true);
       try {
-        // Step 1: Authenticate (register if new user)
-        await authenticate(data.email!, data.password!);
+        // Re-authenticate only when credentials are present (normal new-registration
+        // flow). When resuming after an app restart the existing token is already valid.
+        if (data.email && data.password) {
+          await authenticate(data.email, data.password);
+        }
 
-        // Step 2: Complete profile (token is now stored)
         await completeProfile({
           nickname: data.nickname!,
           gender: data.gender!,
@@ -230,6 +233,7 @@ export default function WeightScreen() {
           diet_goal: data.diet_goal!,
           target_weight: weight,
         });
+        await SecureStore.setItemAsync('onboarding_complete', 'true');
         clearData();
         router.replace("/(app)/home");
       } catch (err: any) {

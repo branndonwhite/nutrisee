@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { getOnboardingRoute } from '../utils/onboarding';
+import { preloadRegisterData } from '../context/RegisterContext';
 
 const { width: W, height: H } = Dimensions.get('window');
 
@@ -63,12 +65,23 @@ export default function SplashScreen() {
 
     const timer = setTimeout(async () => {
       const token = await SecureStore.getItemAsync('token');
-      if (token) {
+      if (!token) {
+        router.replace('/(auth)/register');
+        return;
+      }
+
+      const onboardingComplete = await SecureStore.getItemAsync('onboarding_complete');
+      if (onboardingComplete === 'true') {
         router.replace('/(app)/home');
       } else {
-        router.replace('/(auth)/register');
+        // Token exists but onboarding was never finished — resume from where
+        // they left off. preloadRegisterData() reads SecureStore AND populates
+        // the module-level _preloaded variable so RegisterProvider initialises
+        // synchronously with the correct data (no async race condition).
+        const savedData = await preloadRegisterData();
+        router.replace(getOnboardingRoute(savedData as Record<string, unknown>) as any);
       }
-    }, 2000);  // keep your 2s splash duration
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
