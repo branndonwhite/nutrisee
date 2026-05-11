@@ -8,9 +8,11 @@ import {
   Modal,
   Platform,
   Image,
+  ImageBackground,
   Animated,
   PanResponder,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
@@ -22,6 +24,7 @@ import {
 } from '../../assets/images/icon';
 import { statue, body, fish } from '../../assets/images/bg-photo';
 import { getDailyStats, getAIOverview, DailyStats } from '../../api/dashboard';
+import * as SecureStore from 'expo-secure-store';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 // 3-column grid: full width minus horizontal padding (16*2) minus 2 gaps (10*2), divided by 3
@@ -37,12 +40,78 @@ const CARD_GAP = 24;
 const TOTAL_CARDS = 3;
 
 
+// Abstract background images — require() calls must be static
+const ABSTRACT = {
+  p1: require('../../assets/images/abstract/Protein 1.png'),
+  p2: require('../../assets/images/abstract/Protein 2.png'),
+  p3: require('../../assets/images/abstract/Protein 3.png'),
+  p7: require('../../assets/images/abstract/Protein 7.png'),
+  p8: require('../../assets/images/abstract/Protein 8.png'),
+} as const;
+
+// Maps each nutrition key to its abstract fill image
+const NUTRITION_ABSTRACT: Record<string, ReturnType<typeof require>> = {
+  karbo:      ABSTRACT.p1,
+  protein:    ABSTRACT.p2,
+  lemak:      ABSTRACT.p8,
+  gula:       ABSTRACT.p8,
+  serat:      ABSTRACT.p1,
+  kalsium:    ABSTRACT.p7,
+  vitaminA:   ABSTRACT.p2,
+  vitaminC:   ABSTRACT.p1,
+  vitaminD:   ABSTRACT.p8,
+  kolesterol: ABSTRACT.p1,
+};
+
+const NUTRITION_IMG_TRANSFORM: Record<string, any[]> = {
+  karbo:      [{ translateX: -18 }],
+  protein:    [{ scale: 1.3 }],
+  lemak:      [{ scale: 1.3 }],
+  gula:       [{ translateX: -20 }],
+  serat:      [{ translateX: 18 }],
+  kalsium:    [{ translateX: -16 }, { translateY: -6 }, { scale: 1.3 }],
+  vitaminA:   [{ rotate: '90deg' }, { translateX: -16 }, { scale: 1.5 }],
+  vitaminC:   [{ rotate: '30deg' }, { translateY: 10 }, { scale: 1.6 }],
+  vitaminD:   [{ translateX: 16 }, { translateY: -12 }, { scale: 1.3 }],
+  kolesterol: [{ scaleX: -1 }, { scale: 2 }, { translateX: -50 }, { translateY: 10 }],
+};
+
+type NutrientKey = 'karbo' | 'protein' | 'lemak' | 'gula' | 'serat' | 'kalsium' | 'vitaminA' | 'vitaminC' | 'vitaminD' | 'kolesterol';
+
+const ALL_NUTRIENTS: { key: NutrientKey; label: string; shortLabel: string }[] = [
+  { key: 'karbo',      label: 'Karbohidrat', shortLabel: 'Karbo'     },
+  { key: 'protein',    label: 'Protein',     shortLabel: 'Protein'   },
+  { key: 'lemak',      label: 'Lemak',       shortLabel: 'Lemak'     },
+  { key: 'gula',       label: 'Gula',        shortLabel: 'Gula'      },
+  { key: 'serat',      label: 'Serat',       shortLabel: 'Serat'     },
+  { key: 'kalsium',    label: 'Kalsium',     shortLabel: 'Kalsium'   },
+  { key: 'vitaminA',   label: 'Vitamin A',   shortLabel: 'Vit. A'    },
+  { key: 'vitaminC',   label: 'Vitamin C',   shortLabel: 'Vit. C'    },
+  { key: 'vitaminD',   label: 'Vitamin D',   shortLabel: 'Vit. D'    },
+  { key: 'kolesterol', label: 'Kolesterol',  shortLabel: 'Kolesterol' },
+];
+
+const DEFAULT_NUTRIENTS: NutrientKey[] = ['karbo', 'protein', 'lemak', 'gula', 'serat'];
+
 export default function HomeScreen() {
   const router = useRouter();
   const [showScanModal, setShowScanModal] = useState(false);
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [aiOverview, setAiOverview] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [selectedNutrients, setSelectedNutrients] = useState<NutrientKey[]>(DEFAULT_NUTRIENTS);
+  const [pendingNutrients, setPendingNutrients] = useState<NutrientKey[]>(DEFAULT_NUTRIENTS);
+  const [showNutrientPicker, setShowNutrientPicker] = useState(false);
+
+  useEffect(() => {
+    SecureStore.getItemAsync('selectedNutrients').then(raw => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw) as NutrientKey[];
+        if (Array.isArray(parsed) && parsed.length > 0) setSelectedNutrients(parsed);
+      } catch {}
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -206,20 +275,30 @@ export default function HomeScreen() {
   };
 
   // ─── Helpers ─────────────────────────────────────────────────────
-  const getNutritionColor = (consumed: number, goal: number) => {
-    if (goal === 0) return '#FF8C00';
+  const getColorScheme = (consumed: number, goal: number): { bar: string; shape: string; opacity: number } => {
+    if (goal === 0) return { bar: '#FF3E00', shape: '#AD2A00', opacity: 0.5 };
     const ratio = consumed / goal;
-    if (ratio < 1.0)  return '#FF8C00';   // Orange: not yet reached goal
-    if (ratio <= 1.05) return '#4CAF50';  // Green: at goal or within 5%
-    return '#D32F2F';                     // Red: more than 5% over
+    if (ratio < 1.0)   return { bar: '#FF3E00', shape: '#AD2A00', opacity: 0.5  };
+    if (ratio <= 1.10) return { bar: '#164463', shape: '#267BB5', opacity: 0.5  };
+    return { bar: '#ED0000', shape: '#CF1818', opacity: 0.85 };
   };
 
-  const getCalorieColor = (consumed: number, goal: number) => {
-    if (goal === 0) return '#FF8C00';
-    const ratio = consumed / goal;
-    if (ratio < 1.0)  return '#FF8C00';
-    if (ratio <= 1.05) return '#4CAF50';
-    return '#D32F2F';
+  const getNutrientData = (key: NutrientKey) => {
+    const t = stats?.today;
+    const mg = stats?.macro_goals;
+    const map: Record<NutrientKey, { consumed: number; goal: number }> = {
+      karbo:      { consumed: t?.carbs   ?? 0, goal: mg?.carbs   ?? 0 },
+      protein:    { consumed: t?.protein ?? 0, goal: mg?.protein ?? 0 },
+      lemak:      { consumed: t?.fat     ?? 0, goal: mg?.fat     ?? 0 },
+      gula:       { consumed: t?.sugar   ?? 0, goal: mg?.sugar   ?? 0 },
+      serat:      { consumed: t?.fiber   ?? 0, goal: mg?.fiber   ?? 0 },
+      kalsium:    { consumed: t?.calcium     ?? 0, goal: 1000 },
+      vitaminA:   { consumed: t?.vitamin_a   ?? 0, goal: 900  },
+      vitaminC:   { consumed: t?.vitamin_c   ?? 0, goal: 90   },
+      vitaminD:   { consumed: t?.vitamin_d   ?? 0, goal: 20   },
+      kolesterol: { consumed: t?.cholesterol ?? 0, goal: 300  },
+    };
+    return map[key];
   };
 
   const calorieGoal = stats?.today?.calorie_goal ?? 0;
@@ -228,6 +307,7 @@ export default function HomeScreen() {
   const calorieProgress = calorieGoal > 0 ? Math.min(caloriesIn / calorieGoal, 1) : 0;
   const safeCalorieProgress = Math.max(calorieProgress, 0.001);
   const safeCalorieRemaining = Math.max(1 - calorieProgress, 0.001);
+  const calorieScheme = getColorScheme(caloriesIn, calorieGoal);
 
   // ─── Card renders ─────────────────────────────────────────────────
 
@@ -261,108 +341,109 @@ export default function HomeScreen() {
     >
       {/* Kalori Harian */}
       <View style={styles.calorieCard}>
-        <View style={styles.calorieHeader}>
-          <View style={styles.calorieTitleRow}>
-            <CalorieIcon width={20} height={20} />
-            <Text style={styles.calorieTitle}> Kalori Harian</Text>
+        {/* Header area — overflow:hidden here strictly contains the abstract image
+            so it can never bleed into the white calorieBar below, regardless of
+            any parent transform (scale/opacity from getCardStyle). */}
+        <View style={styles.calorieHeaderWrapper}>
+          <Image source={ABSTRACT.p3} style={[styles.calorieCardAbstract, { transform: [{ translateX: 125 }, { translateY: -140 }, { scale: 0.5 }, { rotate: '22deg' }] }]} resizeMode="cover" />
+          <View style={styles.calorieHeader}>
+            <View style={styles.calorieTitleRow}>
+              <CalorieIcon width={20} height={20} />
+              <Text style={styles.calorieTitle}> Kalori Harian</Text>
+            </View>
+            <Text style={styles.calorieGoalText}>
+              {calorieGoal}
+              <Text style={styles.calorieUnit}>kkal/hari</Text>
+            </Text>
           </View>
-          <Text style={styles.calorieGoalText}>
-            {calorieGoal}
-            <Text style={styles.calorieUnit}>kkal/hari</Text>
-          </Text>
         </View>
         <View style={styles.calorieBar}>
-          <View style={[styles.calorieProgress, { flex: safeCalorieProgress, backgroundColor: getCalorieColor(caloriesIn, calorieGoal) }]}>
-            <Text style={styles.calorieIn}>{caloriesIn}</Text>
-            <Text style={styles.calorieInLabel}>masuk</Text>
-          </View>
-          <View style={[styles.calorieRemaining, { flex: safeCalorieRemaining }]}>
+          {/* Only show the fill when calories have actually been logged */}
+          {caloriesIn > 0 && (
+            <ImageBackground
+              source={ABSTRACT.p2}
+              style={[styles.calorieProgress, { flex: safeCalorieProgress, backgroundColor: calorieScheme.bar }]}
+              imageStyle={[styles.barFillImg, { tintColor: calorieScheme.shape, opacity: calorieScheme.opacity, transform: [{ scaleX: -1 }] }]}
+              resizeMode="cover"
+            >
+              <Text style={styles.calorieIn}>{caloriesIn}</Text>
+              <Text style={styles.calorieInLabel}>masuk</Text>
+            </ImageBackground>
+          )}
+          <View style={[styles.calorieRemaining, { flex: caloriesIn > 0 ? safeCalorieRemaining : 1 }]}>
             <Text style={styles.calorieLeftValue}>{caloriesLeft}</Text>
             <Text style={styles.calorieLeftLabel}>tersisa</Text>
           </View>
         </View>
       </View>
 
-      {/* Nutrition Grid */}
+      {/* Nutrition Grid — dynamic, driven by selectedNutrients */}
       <View style={styles.nutritionGrid}>
-        <View style={styles.nutritionRow}>
-          {(['karbo', 'protein', 'lemak'] as const).map((key) => {
-            const nutrition = stats?.today;
-            const mg = stats?.macro_goals;
-            const nutritionMap = {
-              karbo:   { consumed: nutrition?.carbs   ?? 0, goal: mg?.carbs   ?? 0 },
-              protein: { consumed: nutrition?.protein ?? 0, goal: mg?.protein ?? 0 },
-              lemak:   { consumed: nutrition?.fat     ?? 0, goal: mg?.fat     ?? 0 },
-              gula:    { consumed: nutrition?.sugar   ?? 0, goal: mg?.sugar   ?? 0 },
-              serat:   { consumed: nutrition?.fiber   ?? 0, goal: mg?.fiber   ?? 0 },
-            };
-            const item = nutritionMap[key];
-            if (!item) return null;
-            const label = key.charAt(0).toUpperCase() + key.slice(1);
-            const color = getNutritionColor(item.consumed, item.goal);
-            const progress = item.goal > 0 ? Math.min(item.consumed / item.goal, 1) : 0;
-            const safeProgress = Math.max(progress, 0.001);
-            const safeRemaining = Math.max(1 - progress, 0.001);
-            return (
-              <View key={key} style={styles.nutritionCard}>
-                <View style={styles.nutritionCardHeader}>
-                  <Text style={styles.nutritionLabel}>{label}</Text>
-                  <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>gr</Text></Text>
-                </View>
-                {/* Vertical bar — same concept as calorieBar but rotated */}
-                <View style={styles.nutritionBar}>
-                  <View style={[styles.nutritionBarRemaining, { flex: safeRemaining }]} />
-                  <View style={[styles.nutritionBarFill, { flex: safeProgress, backgroundColor: color }]}>
-                    <Text style={styles.nutritionValue}>
-                      {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
-                    </Text>
+        {(() => {
+          // Split selected nutrients into rows of 3, then fill last row with + button
+          const items: (NutrientKey | '__add__')[] = [...selectedNutrients, '__add__'];
+          const rows: (NutrientKey | '__add__')[][] = [];
+          for (let i = 0; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
+          return rows.map((row, ri) => (
+            <View key={ri} style={styles.nutritionRow}>
+              {row.map((key) => {
+                if (key === '__add__') return (
+                  <View key="add" style={styles.addButtonWrapper}>
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => { setPendingNutrients(selectedNutrients); setShowNutrientPicker(true); }}
+                    >
+                      <Text style={styles.addButtonText}>+</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-        <View style={styles.nutritionRow}>
-          {(['gula', 'serat'] as const).map((key) => {
-            const nutrition2 = stats?.today;
-            const mg2 = stats?.macro_goals;
-            const nutritionMap2 = {
-              gula:  { consumed: nutrition2?.sugar ?? 0, goal: mg2?.sugar ?? 0 },
-              serat: { consumed: nutrition2?.fiber ?? 0, goal: mg2?.fiber ?? 0 },
-            };
-            const item = nutritionMap2[key];
-            if (!item) return null;
-            const label = key.charAt(0).toUpperCase() + key.slice(1);
-            const color = getNutritionColor(item.consumed, item.goal);
-            const progress2 = item.goal > 0 ? Math.min(item.consumed / item.goal, 1) : 0;
-            const safeProgress2 = Math.max(progress2, 0.001);
-            const safeRemaining2 = Math.max(1 - progress2, 0.001);
-            return (
-              <View key={key} style={styles.nutritionCard}>
-                <View style={styles.nutritionCardHeader}>
-                  <Text style={styles.nutritionLabel}>{label}</Text>
-                  <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>gr</Text></Text>
-                </View>
-                <View style={styles.nutritionBar}>
-                  <View style={[styles.nutritionBarRemaining, { flex: safeRemaining2 }]} />
-                  <View style={[styles.nutritionBarFill, { flex: safeProgress2, backgroundColor: color }]}>
-                    <Text style={styles.nutritionValue}>
-                      {item.consumed}<Text style={styles.nutritionValueUnit}>gr</Text>
-                    </Text>
+                );
+                const item = getNutrientData(key);
+                const label = ALL_NUTRIENTS.find(n => n.key === key)?.shortLabel ?? key;
+                const unit = ({ kalsium: 'mg', vitaminA: 'μg', vitaminC: 'mg', vitaminD: 'μg', kolesterol: 'mg' } as Record<string, string>)[key] ?? 'gr';
+                const scheme = getColorScheme(item.consumed, item.goal);
+                const progress = item.goal > 0 ? Math.min(item.consumed / item.goal, 1) : 0;
+                const safeProgress = Math.max(progress, 0.001);
+                const safeRemaining = Math.max(1 - progress, 0.001);
+                return (
+                  <View key={key} style={styles.nutritionCard}>
+                    {(key === 'kalsium' || key === 'kolesterol') ? (
+                      <View style={styles.nutritionCardHeaderScroll}>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.nutritionCardHeaderScrollContent}
+                        >
+                          <Text style={styles.nutritionLabel}>{label}</Text>
+                          <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>{unit}</Text></Text>
+                        </ScrollView>
+                      </View>
+                    ) : (
+                      <View style={styles.nutritionCardHeader}>
+                        <Text style={styles.nutritionLabel} numberOfLines={1}>{label}</Text>
+                        <Text style={styles.nutritionGoal}>{item.goal}<Text style={styles.nutritionUnit}>{unit}</Text></Text>
+                      </View>
+                    )}
+                    <View style={styles.nutritionBar}>
+                      <View style={[styles.nutritionBarRemaining, { flex: safeRemaining }]} />
+                      <ImageBackground
+                        source={NUTRITION_ABSTRACT[key] ?? ABSTRACT.p1}
+                        style={[styles.nutritionBarFill, { flex: safeProgress, backgroundColor: scheme.bar }]}
+                        imageStyle={[styles.barFillImg, { tintColor: scheme.shape, opacity: scheme.opacity, transform: NUTRITION_IMG_TRANSFORM[key] ?? [] }]}
+                        resizeMode="cover"
+                      />
+                      {/* Value pinned to center of the whole bar, color switches at midpoint */}
+                      <View style={styles.nutritionValueOverlay} pointerEvents="none">
+                        <Text style={[styles.nutritionValue, { color: progress > 0.5 ? '#fff' : '#888' }]}>
+                          {item.consumed}<Text style={[styles.nutritionValueUnit, { color: progress > 0.5 ? '#fff' : '#888' }]}>{unit}</Text>
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-            );
-          })}
-          <View style={styles.addButtonWrapper}>
-            <TouchableOpacity
-              style={styles.addButton}
-              // onPress={() => setShowScanModal(true)}
-            >
-              <Text style={styles.addButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                );
+              })}
+            </View>
+          ));
+        })()}
       </View>
     </Animated.View>
   );
@@ -490,6 +571,74 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
       </BlurContainer>
+
+      {/* Nutrient Picker Modal */}
+      <Modal
+        visible={showNutrientPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNutrientPicker(false)}
+      >
+        <TouchableOpacity
+          style={[styles.modalOverlay, { justifyContent: 'center' }]}
+          activeOpacity={1}
+          onPress={() => setShowNutrientPicker(false)}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={styles.nutrientPickerCard}>
+              {/* Abstract decoration — top right */}
+              <Image
+                source={ABSTRACT.p3}
+                style={styles.nutrientPickerAbstract}
+                resizeMode="cover"
+              />
+              {/* Header */}
+              <View style={styles.nutrientPickerHeader}>
+                <Text style={styles.nutrientPickerTitle}>Dashboard Gizi</Text>
+              </View>
+              <Text style={styles.nutrientPickerSubtitle}>
+                Atur Dashboard Gizi sesuai kebutuhanmu!
+              </Text>
+
+              {/* Nutrient toggle grid */}
+              <View style={styles.nutrientPickerGrid}>
+                {ALL_NUTRIENTS.map((n) => {
+                  const active = pendingNutrients.includes(n.key);
+                  return (
+                    <TouchableOpacity
+                      key={n.key}
+                      style={[styles.nutrientChip, active && styles.nutrientChipActive]}
+                      onPress={() => {
+                        setPendingNutrients(prev =>
+                          prev.includes(n.key)
+                            ? prev.filter(k => k !== n.key)
+                            : [...prev, n.key]
+                        );
+                      }}
+                    >
+                      <Text style={[styles.nutrientChipText, active && styles.nutrientChipTextActive]}>
+                        {n.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Update button */}
+              <TouchableOpacity
+                style={styles.nutrientUpdateBtn}
+                onPress={() => {
+                  setSelectedNutrients(pendingNutrients);
+                  SecureStore.setItemAsync('selectedNutrients', JSON.stringify(pendingNutrients));
+                  setShowNutrientPicker(false);
+                }}
+              >
+                <Text style={styles.nutrientUpdateBtnText}>Perbarui</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Scan Modal */}
       <Modal
@@ -640,12 +789,29 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  // Clips the abstract image to exactly the dark header row — geometry-level
+  // containment so it cannot bleed into calorieBar under any transform.
+  calorieHeaderWrapper: {
+    overflow: 'hidden',
+    // Extend to card edges so the abstract image fills the full dark header area
+    marginHorizontal: -16,
+    marginTop: -16,
+    // Restore padding so the header text sits in the right position
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    // No borderRadius — calorieCard's overflow:hidden clips the corners
+  },
+  calorieCardAbstract: {
+    ...StyleSheet.absoluteFillObject,
+    tintColor: '#FF3E0080',
   },
   calorieHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
   calorieTitleRow: {
     flexDirection: 'row',
@@ -674,13 +840,16 @@ const styles = StyleSheet.create({
     height: 72,
     marginHorizontal: -6,
     marginBottom: -6,
-    padding: 2
+    padding: 2,
   },
   calorieProgress: {
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
+    overflow: 'hidden',
   },
+  // Applied via ImageBackground's imageStyle prop — sized correctly in flex containers
+  barFillImg: {},
   calorieIn: {
     fontFamily: FONTS.extraBold,
     fontSize: 20,
@@ -729,6 +898,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  nutritionCardHeaderScroll: {
+    height: 20,
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  nutritionCardHeaderScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   nutritionLabel: {
     fontFamily: FONTS.bold,
     fontSize: 14,
@@ -761,13 +940,16 @@ const styles = StyleSheet.create({
   },
   nutritionBarFill: {
     borderRadius: 10,
+    overflow: 'hidden',
+  },
+  nutritionValueOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nutritionValue: {
     fontFamily: FONTS.extraBold,
     fontSize: 22,
-    color: '#fff',
   },
   nutritionValueUnit: {
     fontFamily: FONTS.regular,
@@ -950,7 +1132,7 @@ const styles = StyleSheet.create({
   // ── Modal ─────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.82)',
     justifyContent: 'flex-end',
   },
   modalCard: {
@@ -982,5 +1164,73 @@ const styles = StyleSheet.create({
   modalOptionDesc: {
     fontFamily: FONTS.regular, fontSize: 13, color: COLORS.textSecondary,
     textAlign: 'center', lineHeight: 20,
+  },
+
+  // ── Nutrient Picker Modal ─────────────────────────────────────────
+  nutrientPickerCard: {
+    backgroundColor: '#0E1214',
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 20,
+    overflow: 'hidden',
+  },
+  nutrientPickerAbstract: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    top: -7,
+    right: -20,
+    tintColor: '#313131',
+    transform: [{ rotate: '20deg' }],
+  },
+  nutrientPickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  nutrientPickerTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: '#fff',
+  },
+  nutrientPickerSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+  },
+  nutrientPickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  nutrientChip: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  nutrientChipActive: {
+    backgroundColor: '#FF3E00',
+  },
+  nutrientChipText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 14,
+    color: '#888',
+  },
+  nutrientChipTextActive: {
+    color: '#fff',
+  },
+  nutrientUpdateBtn: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  nutrientUpdateBtnText: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: '#fff',
   },
 });
