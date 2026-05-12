@@ -129,6 +129,14 @@ export default function HomeScreen() {
           if (statsResult.status === 'fulfilled') {
             setStats(statsResult.value);
           } else {
+            const errCode = statsResult.reason?.response?.data?.code;
+            const status  = statsResult.reason?.response?.status;
+            // Profile not found (onboarding incomplete) → send back to onboarding
+            if (errCode === 'NO_PROFILE' || status === 404) {
+              await SecureStore.deleteItemAsync('onboarding_complete');
+              router.replace('/(auth)/register');
+              return;
+            }
             console.error('getDailyStats error:', statsResult.reason?.response?.data, statsResult.reason?.message);
           }
           if (overviewResult.status === 'fulfilled') setAiOverview(overviewResult.value);

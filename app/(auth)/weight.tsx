@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
-import { authenticate, completeProfile } from "../../api/auth";
+import { completeProfile } from "../../api/auth";
 import * as SecureStore from 'expo-secure-store';
 import { logWeight, updateWeightGoal, getWeightGoal } from '../../api/weight';
 import { BackArrowIcon, NextArrowIcon } from "../../assets/images/icon";
@@ -198,12 +198,6 @@ export default function WeightScreen() {
     if (isRegisterGoal) {
       setLoading(true);
       try {
-        // Re-authenticate only when credentials are present (normal new-registration
-        // flow). When resuming after an app restart the existing token is already valid.
-        if (data.email && data.password) {
-          await authenticate(data.email, data.password);
-        }
-
         await completeProfile({
           nickname: data.nickname!,
           gender: data.gender!,
