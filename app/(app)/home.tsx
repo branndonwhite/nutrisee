@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import BlurContainer from '../../components/BlurContainer';
@@ -33,7 +34,7 @@ const GRID_GAP = 10;
 const NUTRITION_COL_WIDTH = (SCREEN_WIDTH - GRID_PADDING - GRID_GAP * 2) / 3;
 
 const HEADER_HEIGHT = 120;
-const NAVBAR_HEIGHT = Platform.OS === 'ios' ? 140 : 120;
+const NAVBAR_HEIGHT = Platform.OS === 'ios' ? 140 : 148;
 const VIEWPORT_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - NAVBAR_HEIGHT;
 const CARD_GAP = 24;
 
@@ -95,6 +96,13 @@ const DEFAULT_NUTRIENTS: NutrientKey[] = ['karbo', 'protein', 'lemak', 'gula', '
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  // Gesture nav  → insets.bottom ≈ 0  → treat same as iOS (24 px breathing room)
+  // 3-button nav → insets.bottom ≈ 48 → add only 4 px on top (keeps old spacing)
+  const navbarPb  = insets.bottom + (insets.bottom > 0 ? 4 : 24);
+  const navbarPt  = Platform.OS === 'ios' ? 12 : 8;
+  const navbarH   = navbarPt + 72 + navbarPb + 16; // 16 px visual buffer
   const [showScanModal, setShowScanModal] = useState(false);
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [aiOverview, setAiOverview] = useState<string>('');
@@ -538,7 +546,7 @@ export default function HomeScreen() {
       <BlurContainer
         intensity={60}
         tint="light"
-        style={styles.navbar}
+        style={[styles.navbar, { paddingBottom: navbarPb, height: navbarH }]}
         androidFallbackColor="rgba(245,245,245,0.95)"
         gradientDirection="footer"
       >
@@ -652,7 +660,7 @@ export default function HomeScreen() {
       <Modal
         visible={showScanModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowScanModal(false)}
       >
         <TouchableOpacity
@@ -660,7 +668,7 @@ export default function HomeScreen() {
           activeOpacity={1}
           onPress={() => setShowScanModal(false)}
         >
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: 999 + insets.bottom + 16 }]}>
             <View style={styles.modalOptions}>
               <TouchableOpacity
                 style={styles.modalOption}
@@ -1086,10 +1094,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 32,
+    // paddingBottom + height applied inline (inset-aware, see navbarStyle below)
     paddingTop: Platform.OS === 'ios' ? 12 : 8,
-    height: NAVBAR_HEIGHT,
   },
   updateWeightButton: { alignItems: 'center', justifyContent: 'center' },
   updateWeightInner: {
@@ -1150,8 +1158,9 @@ const styles = StyleSheet.create({
     // No bottom radius — bleeds into home bar
     paddingTop: 12,
     paddingHorizontal: 12,
-    paddingBottom: 999, // bleeds way below screen bottom
-    marginBottom: -999, // pulls it back so it sits flush
+    // paddingBottom is set inline: 999 + insets.bottom + 16 (so it clears the
+    // system nav bar on both gesture-nav and 3-button-nav Android devices)
+    marginBottom: -999, // pulls the bleed back so card sits flush at screen edge
   },
   modalOptions: { flexDirection: 'row', gap: 12 },
   modalOption: {
@@ -1159,9 +1168,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 19,
     borderTopRightRadius: 19,
-    paddingVertical: 20,
+    // No bottom radius — cards bleed all the way down
+    paddingTop: 20,
     paddingHorizontal: 12,
-    paddingBottom: 28,
+    paddingBottom: 999,  // bleed below
+    marginBottom: -999,  // cancel layout impact so card position is unchanged
     alignItems: 'center',
     gap: 12,
   },

@@ -13,10 +13,10 @@
       "icon": "./assets/images/ICON_N.png"
     },
     "android": {
-      "icon": "./assets/images/ICON_N.png",
+      "icon": "./assets/images/ICON_N_android.png",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/ICON_N.png"
+        "foregroundImage": "./assets/images/ICON_N_android.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
