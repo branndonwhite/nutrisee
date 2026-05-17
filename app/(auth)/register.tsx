@@ -1,4 +1,4 @@
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -25,6 +25,7 @@ export default function RegisterScreen() {
   const { setData } = useRegister();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
@@ -57,7 +58,8 @@ export default function RegisterScreen() {
         setData(merged as any);
 
         // Route to wherever they left off, not always to the first screen.
-        router.push(getOnboardingRoute(merged) as any);
+        // Use replace so the register screen is removed from the back stack.
+        router.replace(getOnboardingRoute(merged) as any);
       }
     } catch (err: any) {
       console.log('authenticate error:', JSON.stringify(err?.response?.data));
@@ -115,14 +117,27 @@ export default function RegisterScreen() {
             value={email}
             onChangeText={setEmail}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Kata Sandi"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Kata Sandi"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(v => !v)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="rgba(255,255,255,0.6)"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Lanjutkan Button */}
@@ -228,6 +243,26 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 14,
     color: '#fff',
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: '#fff',
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,

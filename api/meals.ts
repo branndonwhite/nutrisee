@@ -38,3 +38,16 @@ export const getMealHistory = async (limit: number = 20) => {
   const response = await client.get(`/meals/history?limit=${limit}`);
   return response.data.meals;
 };
+
+export const uploadImage = async (base64: string): Promise<{ image_url: string }> => {
+  const response = await client.post('/meals/upload-image', { image: base64 });
+  return response.data;
+};
+
+export const analyzeMealWithDescription = async (
+  base64: string,
+  description: string
+): Promise<{ nutrition: any; image_url: string; description: string }> => {
+  const response = await client.patch('/meals/analyze', { image: base64, description });
+  return response.data;
+};

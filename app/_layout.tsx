@@ -1,4 +1,10 @@
+import { LogBox } from 'react-native';
 import { useFonts } from 'expo-font';
+
+// Suppress the React Navigation duplicate-linking dev warning.
+// launchMode="singleTask" is already set in AndroidManifest.xml — this is
+// a false-positive that only fires in dev when 3-button nav is active.
+LogBox.ignoreLogs(['Looks like you have configured linking in multiple places']);
 import {
   RethinkSans_400Regular,
   RethinkSans_400Regular_Italic,

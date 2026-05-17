@@ -1,160 +1,106 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Image,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  StatusBar,
-} from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, StyleSheet, Image, ImageBackground, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { getOnboardingRoute } from '../utils/onboarding';
-import { preloadRegisterData } from '../context/RegisterContext';
-
-const { width: W, height: H } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const floatY = useRef(new Animated.Value(10)).current;
 
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.88)).current;
-  const shapesOpacity = useRef(new Animated.Value(0)).current;
-  const shapesFloat = useRef(new Animated.Value(0)).current;
-
+  // Gentle float: starts 10 px below rest position, drifts up to 0, loops
   useEffect(() => {
-    Animated.parallel([
+    const anim = Animated.loop(
       Animated.sequence([
-        Animated.delay(300),
-        Animated.parallel([
-          Animated.spring(logoScale, {
-            toValue: 1,
-            useNativeDriver: true,
-            tension: 55,
-            friction: 9,
-          }),
-          Animated.timing(logoOpacity, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-      Animated.timing(shapesOpacity, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Float upward and back, loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shapesFloat, {
-          toValue: -16,
-          duration: 2800,
+        Animated.timing(floatY, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.timing(shapesFloat, {
-          toValue: 0,
-          duration: 2800,
+        Animated.timing(floatY, {
+          toValue: 10,
+          duration: 2000,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
-    ).start();
-
-    const timer = setTimeout(async () => {
-      const token = await SecureStore.getItemAsync('token');
-      if (!token) {
-        router.replace('/(auth)/register');
-        return;
-      }
-
-      const onboardingComplete = await SecureStore.getItemAsync('onboarding_complete');
-      if (onboardingComplete === 'true') {
-        router.replace('/(app)/home');
-      } else {
-        // Token exists but onboarding was never finished — resume from where
-        // they left off. preloadRegisterData() reads SecureStore AND populates
-        // the module-level _preloaded variable so RegisterProvider initialises
-        // synchronously with the correct data (no async race condition).
-        const savedData = await preloadRegisterData();
-        router.replace(getOnboardingRoute(savedData as Record<string, unknown>) as any);
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    );
+    anim.start();
+    return () => anim.stop();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const MINIMUM_MS = 2500;
+
+      // Run routing logic and minimum timer in parallel; navigate only after
+      // both finish so the splash is always visible for at least 2.5 seconds.
+      const [route] = await Promise.all([
+        (async (): Promise<string> => {
+          const token = await SecureStore.getItemAsync('token');
+          if (!token) return '/(auth)/register';
+
+          const onboardingComplete = await SecureStore.getItemAsync('onboarding_complete');
+          if (onboardingComplete === 'true') {
+            return '/(app)/home';
+          } else {
+            // Onboarding not finished — clear the token so the user must log in
+            // again. register_data is kept so getOnboardingRoute can resume from
+            // the last incomplete step after they authenticate.
+            await SecureStore.deleteItemAsync('token');
+            return '/(auth)/register';
+          }
+        })(),
+        new Promise<void>(resolve => setTimeout(resolve, MINIMUM_MS)),
+      ]);
+
+      router.replace(route as any);
+    })();
+  }, []);
+
+  // Mirror the native splash visually so there is no blank flash between the
+  // native splash hiding (after fonts load) and the router pushing a screen.
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
-      <Image
-        source={require('../assets/images/bg/SPLASH_Background.png')}
-        style={styles.background}
-        resizeMode="cover"
-      />
-
+    <ImageBackground
+      source={require('../assets/images/bg/SPLASH_Background.png')}
+      style={styles.root}
+      resizeMode="cover"
+    >
       <Animated.Image
         source={require('../assets/images/bg/SPLASH_Shapes.png')}
-        style={[
-          styles.shapes,
-          {
-            opacity: shapesOpacity,
-            transform: [{ translateY: shapesFloat }],
-          },
-        ]}
-        resizeMode="cover"
+        style={[styles.shapes, { transform: [{ translateY: floatY }] }]}
+        resizeMode="contain"
       />
-
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: logoOpacity,
-            transform: [{ scale: logoScale }],
-          },
-        ]}
-      >
+      <View style={styles.center}>
         <Image
           source={require('../assets/images/branding/LOGO_Text_White.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-      </Animated.View>
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A2D6E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
   },
-  background: {
-    ...StyleSheet.absoluteFillObject,
-    width: W,
-    height: H,
-  },
-  // Anchored to bottom, taller than needed so floating up never gaps
   shapes: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -20,
     left: 0,
-    width: W,
-    height: H * 0.45 + 20,
+    right: 0,
+    width: '100%',
+    aspectRatio: 402 / 453,
   },
-  logoContainer: {
+  center: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: H * 0.08,
   },
   logo: {
-    width: W * 0.58,
-    height: 72,
+    width: 200,
+    height: 89,
   },
 });
