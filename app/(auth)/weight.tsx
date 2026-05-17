@@ -16,7 +16,8 @@ import {
   View,
 } from "react-native";
 import Svg, { Line, Text as SvgText } from "react-native-svg";
-import { authenticate, completeProfile } from "../../api/auth";
+import { completeProfile } from "../../api/auth";
+import * as SecureStore from 'expo-secure-store';
 import { logWeight, updateWeightGoal, getWeightGoal } from '../../api/weight';
 import { BackArrowIcon, NextArrowIcon } from "../../assets/images/icon";
 import { COLORS } from "../../constants/colors";
@@ -71,6 +72,7 @@ export default function WeightScreen() {
         });
 
         currentAngleRef.current = (currentW - 70) * DEG_PER_KG;
+        setInputText(String(currentW));
       } catch (err) {
         console.error('Failed to fetch weight data:', err);
       }
@@ -86,7 +88,6 @@ export default function WeightScreen() {
 
   // ── Scale refs ────────────────────────────────────────────────────
   const lastXRef = useRef(0);
-  const velocityRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
   const currentAngleRef = useRef(0);
 
@@ -108,8 +109,9 @@ export default function WeightScreen() {
       tension: 60,
       friction: 12,
     }).start();
-    // Restore angle ref for the newly active tab
+    // Restore angle ref and text box for the newly active tab
     currentAngleRef.current = tabStates[tab].angle;
+    setInputText(String(tabStates[tab].weight));
   };
 
   // ── Scale helpers ─────────────────────────────────────────────────
@@ -133,8 +135,8 @@ export default function WeightScreen() {
         }));
       } else {
         setWeight(kg);
-        setInputText(String(kg));
       }
+      setInputText(String(kg));
     },
     [isUpdate, activeTab],
   );
@@ -143,28 +145,6 @@ export default function WeightScreen() {
   useEffect(() => {
     applyAngleRef.current = applyAngle;
   }, [applyAngle]);
-
-  const startMomentum = useCallback(
-    (velocity: number) => {
-      if (animFrameRef.current !== null)
-        cancelAnimationFrame(animFrameRef.current);
-      let vel = velocity;
-      const friction = 0.93;
-      const step = () => {
-        vel *= friction;
-        if (Math.abs(vel) < 0.05) return;
-        applyAngle(currentAngleRef.current + vel);
-        animFrameRef.current = requestAnimationFrame(step);
-      };
-      animFrameRef.current = requestAnimationFrame(step);
-    },
-    [applyAngle],
-  );
-
-  const startMomentumRef = useRef(startMomentum);
-  useEffect(() => {
-    startMomentumRef.current = startMomentum;
-  }, [startMomentum]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -176,38 +156,40 @@ export default function WeightScreen() {
           animFrameRef.current = null;
         }
         lastXRef.current = gs.x0;
-        velocityRef.current = 0;
       },
       onPanResponderMove: (_, gs) => {
         const dx = gs.moveX - lastXRef.current;
         lastXRef.current = gs.moveX;
-        velocityRef.current = dx * 0.15;
         applyAngleRef.current(currentAngleRef.current - dx * 0.15);
       },
-      onPanResponderRelease: () => {
-        startMomentumRef.current(-velocityRef.current * 5);
-      },
+      // Stop exactly where the finger lifts — no drift
+      onPanResponderRelease: () => {},
+      onPanResponderTerminate: () => {},
     }),
   ).current;
 
+  // Only track what the user is typing — ruler moves on blur/submit
   const handleInputChange = (text: string) => {
-    const num = parseInt(text);
+    setInputText(text);
+  };
+
+  // Commit typed value to the ruler on blur or submit
+  const handleInputBlur = () => {
+    const current = isUpdate ? tabStates[activeTab].weight : weight;
+    const num = parseInt(inputText, 10);
+    const val = !isNaN(num)
+      ? Math.min(MAX_WEIGHT, Math.max(MIN_WEIGHT, num))
+      : current;
+    const angle = (val - 70) * DEG_PER_KG;
+    currentAngleRef.current = angle;
+    setInputText(String(val));
     if (isUpdate) {
-      if (!isNaN(num) && num >= MIN_WEIGHT && num <= MAX_WEIGHT) {
-        const angle = (num - 70) * DEG_PER_KG;
-        currentAngleRef.current = angle;
-        setTabStates((prev) => ({
-          ...prev,
-          [activeTab]: { weight: num, angle },
-        }));
-      }
+      setTabStates((prev) => ({
+        ...prev,
+        [activeTab]: { weight: val, angle },
+      }));
     } else {
-      setInputText(text);
-      if (!isNaN(num) && num >= MIN_WEIGHT && num <= MAX_WEIGHT) {
-        const angle = (num - 70) * DEG_PER_KG;
-        currentAngleRef.current = angle;
-        setWeight(num);
-      }
+      setWeight(val);
     }
   };
 
@@ -216,10 +198,6 @@ export default function WeightScreen() {
     if (isRegisterGoal) {
       setLoading(true);
       try {
-        // Step 1: Authenticate (register if new user)
-        await authenticate(data.email!, data.password!);
-
-        // Step 2: Complete profile (token is now stored)
         await completeProfile({
           nickname: data.nickname!,
           gender: data.gender!,
@@ -230,6 +208,7 @@ export default function WeightScreen() {
           diet_goal: data.diet_goal!,
           target_weight: weight,
         });
+        await SecureStore.setItemAsync('onboarding_complete', 'true');
         clearData();
         router.replace("/(app)/home");
       } catch (err: any) {
@@ -444,8 +423,10 @@ export default function WeightScreen() {
         <View style={styles.weightDisplay}>
           <TextInput
             style={styles.weightInput}
-            value={String(displayWeight)}
+            value={inputText}
             onChangeText={handleInputChange}
+            onBlur={handleInputBlur}
+            onSubmitEditing={handleInputBlur}
             keyboardType="numeric"
             maxLength={3}
             selectTextOnFocus

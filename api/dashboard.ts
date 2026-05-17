@@ -20,6 +20,11 @@ export interface DailyStats {
     fat: number;
     sugar: number;
     fiber: number;
+    vitamin_a: number;
+    vitamin_c: number;
+    vitamin_d: number;
+    calcium: number;
+    cholesterol: number;
   };
   progression: {
     date: string;

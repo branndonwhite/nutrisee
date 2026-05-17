@@ -6,8 +6,6 @@ export const authenticate = async (email: string, password: string) => {
   const { token, user, isNewUser, hasProfile } = response.data;
 
   await SecureStore.setItemAsync('token', token);
-  
-  const verify = await SecureStore.getItemAsync('token');
 
   return { user, isNewUser, hasProfile };
 };
@@ -28,4 +26,6 @@ export const completeProfile = async (data: {
 
 export const logout = async () => {
   await SecureStore.deleteItemAsync('token');
+  await SecureStore.deleteItemAsync('onboarding_complete');
+  await SecureStore.deleteItemAsync('register_data');
 };

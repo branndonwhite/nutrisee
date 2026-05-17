@@ -1,4 +1,4 @@
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRegister } from '../../context/RegisterContext';
+import { useRegister, seedPreloadedData } from '../../context/RegisterContext';
+import * as SecureStore from 'expo-secure-store';
+import { getOnboardingRoute } from '../../utils/onboarding';
 import { COLORS } from "../../constants/colors";
 import { FONTS } from "../../constants/fonts";
 import { authenticate } from '../../api/auth';
@@ -23,6 +25,7 @@ export default function RegisterScreen() {
   const { setData } = useRegister();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleContinue = async () => {
@@ -37,11 +40,26 @@ export default function RegisterScreen() {
 
       if (!isNewUser && hasProfile) {
         // Existing user with complete profile → go to app
+        await SecureStore.setItemAsync('onboarding_complete', 'true');
         router.replace('/(app)/home');
       } else {
-        // New user OR existing user without profile → go through onboarding
-        setData({ email, password });
-        router.push('/(auth)/personal-info');
+        // Read any previously saved onboarding progress BEFORE calling setData
+        // so the email/password merge doesn't wipe prior fields.
+        const savedJson = await SecureStore.getItemAsync('register_data');
+        const savedData: Record<string, unknown> = savedJson
+          ? JSON.parse(savedJson)
+          : {};
+
+        const merged = { ...savedData, email, password };
+
+        // Seed the module-level preload synchronously so the next screen's
+        // RegisterProvider starts with this data — no async race.
+        seedPreloadedData(merged as any);
+        setData(merged as any);
+
+        // Route to wherever they left off, not always to the first screen.
+        // Use replace so the register screen is removed from the back stack.
+        router.replace(getOnboardingRoute(merged) as any);
       }
     } catch (err: any) {
       console.log('authenticate error:', JSON.stringify(err?.response?.data));
@@ -99,14 +117,27 @@ export default function RegisterScreen() {
             value={email}
             onChangeText={setEmail}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Kata Sandi"
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Kata Sandi"
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(v => !v)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="rgba(255,255,255,0.6)"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Lanjutkan Button */}
@@ -212,6 +243,26 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 14,
     color: '#fff',
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: '#fff',
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,

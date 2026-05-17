@@ -32,7 +32,6 @@ export default function HeightScreen() {
   const [loading, setLoading] = useState(false);
   const offsetRef = useRef(164 * PX_PER_CM);
   const lastYRef = useRef(0);
-  const velocityRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
 
   const clamp = (val: number) =>
@@ -49,23 +48,6 @@ export default function HeightScreen() {
     setInputText(String(cm));
   }, []);
 
-  const startMomentum = useCallback(
-    (velocity: number) => {
-      if (animFrameRef.current !== null)
-        cancelAnimationFrame(animFrameRef.current);
-      let vel = velocity;
-      const friction = 0.93;
-      const step = () => {
-        vel *= friction;
-        if (Math.abs(vel) < 0.3) return;
-        applyOffset(offsetRef.current + vel);
-        animFrameRef.current = requestAnimationFrame(step);
-      };
-      animFrameRef.current = requestAnimationFrame(step);
-    },
-    [applyOffset],
-  );
-
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -76,28 +58,33 @@ export default function HeightScreen() {
           animFrameRef.current = null;
         }
         lastYRef.current = gs.y0;
-        velocityRef.current = 0;
       },
       onPanResponderMove: (_, gs) => {
         const dy = gs.moveY - lastYRef.current;
         lastYRef.current = gs.moveY;
-        velocityRef.current = dy;
         // swipe up = increase height, swipe down = decrease
         applyOffset(offsetRef.current - dy);
       },
-      onPanResponderRelease: () => {
-        startMomentum(-velocityRef.current * 3);
-      },
+      // Stop exactly where the finger lifts — no drift
+      onPanResponderRelease: () => {},
+      onPanResponderTerminate: () => {},
     }),
   ).current;
 
+  // Only track what the user is typing — ruler moves on blur/submit
   const handleInputChange = (text: string) => {
     setInputText(text);
-    const num = parseInt(text);
-    if (!isNaN(num) && num >= MIN_HEIGHT && num <= MAX_HEIGHT) {
-      offsetRef.current = num * PX_PER_CM;
-      setHeight(num);
-    }
+  };
+
+  // Commit typed value to the ruler on blur or submit
+  const handleInputBlur = () => {
+    const num = parseInt(inputText, 10);
+    const val = !isNaN(num)
+      ? Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, num))
+      : height;
+    offsetRef.current = val * PX_PER_CM;
+    setHeight(val);
+    setInputText(String(val));
   };
 
   const handleSubmit = () => {
@@ -193,6 +180,8 @@ export default function HeightScreen() {
                 style={styles.heightInput}
                 value={inputText}
                 onChangeText={handleInputChange}
+                onBlur={handleInputBlur}
+                onSubmitEditing={handleInputBlur}
                 keyboardType="numeric"
                 maxLength={3}
                 selectTextOnFocus

@@ -12,13 +12,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { FONTS } from '../../constants/fonts';
 import { BackArrowIcon, NutriscanIcon, CamSwitchIcon } from '../../assets/images/icon';
 import GalleryIcon from '../../assets/images/icon/GalleryIcon';
 import ScanLoadingOverlay from '../../components/ScanLoadingOverlay';
 import BlurContainer from '../../components/BlurContainer';
-import { analyzeMealImage } from '../../api/meals';
+import { analyzeMealImage, analyzeMealWithDescription } from '../../api/meals';
 import * as Location from 'expo-location';
 
 const WHITE = '#FFFFFF';
@@ -38,6 +38,7 @@ const compressAndEncode = async (uri: string): Promise<string> => {
 };
 
 export default function NutriScanCameraScreen() {
+  const { description } = useLocalSearchParams<{ description?: string }>();
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -123,13 +124,22 @@ export default function NutriScanCameraScreen() {
         }
       } catch { /* location optional */ }
 
-      // Step 2: Send to API
-      const { nutrition, image_url } = await analyzeMealImage(base64);
+      // Step 2: Send to API — use combined endpoint if a description was passed in
+      const { nutrition, image_url } = description
+        ? await analyzeMealWithDescription(base64, description)
+        : await analyzeMealImage(base64);
 
       router.push({
         pathname: '/(app)/result-screen',
         params: {
-          data: JSON.stringify({ ...nutrition, image_url, imageUri: uri, location: locationName }),
+          mode: 'image',
+          data: JSON.stringify({
+            ...nutrition,
+            image_url,
+            imageUri: uri,
+            location: locationName,
+            ...(description ? { description } : {}),
+          }),
         },
       });
     } catch (err: any) {

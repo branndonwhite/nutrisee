@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useRef, useState, useCallback } from "react";
 import {
   Animated,
@@ -40,6 +40,11 @@ const FOOD_FACTS: string[] = [
 const GAP = 12;
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function ScanTextScreen() {
+  const { hideCamera, existingImageUri, existingImageUrl } =
+    useLocalSearchParams<{ hideCamera?: string; existingImageUri?: string; existingImageUrl?: string }>();
+  const isCameraHidden  = hideCamera === 'true';
+  const hasExistingImage = !!existingImageUri && !!existingImageUrl;
+
   const [description, setDescription] = useState("");
   const selectedImageRef = useRef<string | null>(null);
   const [selectedImage, setSelectedImageState] = useState<string | null>(null);
@@ -142,11 +147,13 @@ export default function ScanTextScreen() {
       router.push({
         pathname: '/(app)/result-screen',
         params: {
+          mode: hasExistingImage ? 'image' : 'text',
           data: JSON.stringify({
             ...nutrition,
             description: savedDescription,
-            image_url: image_url ?? undefined,
-            imageUri: selectedImage ?? undefined,
+            // prefer existing image (from image-scan) over any newly picked image
+            image_url:  existingImageUrl  || image_url  || undefined,
+            imageUri:   existingImageUri  || selectedImage || undefined,
             location: locationName,
           }),
         },
@@ -215,21 +222,25 @@ export default function ScanTextScreen() {
 
           {/* Action row */}
           <View style={styles.cardActionRow}>
-            {/* Gallery */}
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={pickFromGallery}
-            >
-              <GalleryIcon width={22} height={18} fill={BLACK} />
-            </TouchableOpacity>
+            {/* Gallery — hidden when coming from image-scan result */}
+            {!isCameraHidden && (
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={pickFromGallery}
+              >
+                <GalleryIcon width={22} height={18} fill={BLACK} />
+              </TouchableOpacity>
+            )}
 
-            {/* Camera */}
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={pickFromCamera}
-            >
-              <NutriscanIcon width={22} height={22} fill={BLACK} />
-            </TouchableOpacity>
+            {/* Camera — hidden when coming from image-scan result */}
+            {!isCameraHidden && (
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={pickFromCamera}
+              >
+                <NutriscanIcon width={22} height={22} fill={BLACK} />
+              </TouchableOpacity>
+            )}
 
             <View style={{ flex: 1 }} />
 
