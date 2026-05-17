@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Modal,
   Share,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -198,9 +199,37 @@ const getRemarkColor = (state: ShareModalState): string =>
   state.type === 'nutrient' ? state.nutrient.color : DUMMY.weightData.color;
 
 // ─── Bar Chart ────────────────────────────────────────────────────────────────
-const BarChart: React.FC<{ nutrient: Nutrient; dates: string[]; contentWidth?: number }> = ({
-  nutrient, dates, contentWidth,
-}) => {
+const BarChart: React.FC<{
+  nutrient: Nutrient;
+  dates: string[];
+  contentWidth?: number;
+  /** forwarded from NutrientCard — fires share modal after 3 s hold */
+  onLongPress?: () => void;
+  /** forwarded so the hold-progress animation starts even when pressing a bar */
+  onCardPressIn?: () => void;
+  onCardPressOut?: () => void;
+}> = ({ nutrient, dates, contentWidth, onLongPress, onCardPressIn, onCardPressOut }) => {
+  const [activeBar, setActiveBar] = useState<number | null>(null);
+  const barTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const labelOpacity = useRef(new Animated.Value(0)).current;
+
+  const handleBarPress = (i: number) => {
+    if (barTimer.current) clearTimeout(barTimer.current);
+    labelOpacity.stopAnimation();
+    labelOpacity.setValue(1);
+    setActiveBar(i);
+
+    barTimer.current = setTimeout(() => {
+      Animated.timing(labelOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true, // opacity only — no color interpolation needed
+      }).start(({ finished }) => {
+        if (finished) setActiveBar(null);
+      });
+    }, 2000);
+  };
+
   const todayIdx = dates.length - 1;
   const maxVal = Math.max(...nutrient.values, nutrient.goal) * 1.08;
   const goalPct = nutrient.goal / maxVal;
@@ -216,27 +245,57 @@ const BarChart: React.FC<{ nutrient: Nutrient; dates: string[]; contentWidth?: n
       </View>
       <View style={[bStyles.barsArea, { left: LABEL_W }]}>
         {nutrient.values.map((val, i) => {
-          const isToday = i === todayIdx;
+          const isToday  = i === todayIdx;
+          const isActive = activeBar === i;
+          const showLabel = isToday || isActive;
           const fillH = Math.max(6, (val / maxVal) * BAR_CHART_HEIGHT);
           return (
-            <View key={i} style={bStyles.col}>
+            <TouchableOpacity
+              key={i}
+              style={bStyles.col}
+              activeOpacity={0.75}
+              onPress={() => handleBarPress(i)}
+              onLongPress={onLongPress}
+              onPressIn={onCardPressIn}
+              onPressOut={onCardPressOut}
+              delayLongPress={3000}
+            >
               <View style={bStyles.barContainer}>
+                {/* Today label — always visible, no animation */}
                 {isToday && (
                   <Text numberOfLines={1} style={[bStyles.todayValueLabel, { color: nutrient.color, bottom: fillH + 4 }]}>
                     {val}
                   </Text>
                 )}
+                {/* Base bar — always gray for non-today */}
                 <View style={[bStyles.barFill, {
                   height: fillH,
                   backgroundColor: isToday ? nutrient.color : 'rgba(210,210,210,0.2)',
                   borderRadius: 10,
                 }]} />
+                {/* Active overlay: colored bar fill + label fade as one unit */}
+                {isActive && !isToday && (
+                  <Animated.View style={[StyleSheet.absoluteFill, { opacity: labelOpacity }]}>
+                    <View style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      height: fillH, backgroundColor: nutrient.color + 'BB', borderRadius: 10,
+                    }} />
+                    <Text numberOfLines={1} style={[bStyles.todayValueLabel, { color: nutrient.color, bottom: fillH + 4 }]}>
+                      {val}
+                    </Text>
+                  </Animated.View>
+                )}
               </View>
-              <View style={[bStyles.timelineDot, isToday && { backgroundColor: nutrient.color }]} />
+              {/* Timeline dot with overlay for active color */}
+              <View style={[bStyles.timelineDot, isToday && { backgroundColor: nutrient.color }, { overflow: 'hidden' }]}>
+                {isActive && !isToday && (
+                  <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: nutrient.color, borderRadius: 4, opacity: labelOpacity }]} />
+                )}
+              </View>
               <Text style={[bStyles.dateLabel, isToday && bStyles.dateLabelToday]}>
                 {dates[i].split(' ')[0]}{'\n'}{dates[i].split(' ')[1]}
               </Text>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -258,6 +317,41 @@ const bStyles = StyleSheet.create({
   dateLabel: { fontFamily: FONTS.regular, fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 3, lineHeight: 13 },
   dateLabelToday: { fontFamily: FONTS.bold, color: '#fff' },
 });
+
+// ─── Nutrient Card (interactive: tap bar → show value, hold 3s → share) ──────
+const NutrientCard: React.FC<{
+  item: Nutrient;
+  dates: string[];
+  pageWidth: number;
+  onShare: () => void;
+}> = ({ item, dates, pageWidth, onShare }) => {
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onLongPress={onShare}
+      delayLongPress={3000}
+      style={{ width: pageWidth, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, flex: 1 }}
+    >
+      <View style={styles.nutrientHeader}>
+        <View style={styles.nutrientTitleRow}>
+          <CalorieIcon width={20} height={20} />
+          <Text style={styles.nutrientTitle}> {item.label}</Text>
+        </View>
+        <View style={styles.nutrientGoalRow}>
+          <Text style={styles.nutrientGoalBig}>{item.goal}</Text>
+          <Text style={styles.nutrientGoalUnit}>{item.unit}</Text>
+        </View>
+      </View>
+
+      <BarChart
+        nutrient={item}
+        dates={dates}
+        onLongPress={onShare}
+      />
+
+    </TouchableOpacity>
+  );
+};
 
 // ─── Weight Line Chart ────────────────────────────────────────────────────────
 const WeightChart: React.FC<{ data: WeightData; lineW?: number }> = ({ data, lineW }) => {
@@ -656,6 +750,42 @@ export default function ProfileScreen() {
   const [weeklyStats, setWeeklyStats] = useState<{ week: any[]; dates: string[]; goals: any } | null>(null);
   const [badgeStates, setBadgeStates] = useState<Record<string, boolean>>({});
 
+  // ── Dynamic days-to-goal estimation ────────────────────────────────
+  // Formula: effectiveDaily = BASE_PLAN (500 kcal) + adherence delta
+  //   adherenceDelta = calorieGoal - avgConsumedLast7Days
+  //   positive  → eating less than goal  → extra deficit  → fewer days
+  //   negative  → eating more than goal  → less deficit   → more days
+  //   days = ceil(kgRemaining × 7700 / effectiveDaily)
+  const dynamicEstimatedDays = useMemo(() => {
+    const currentW  = weightTarget?.current_weight ?? profileData?.weight ?? 0;
+    const targetW   = weightTarget?.target_weight  ?? null;
+    if (!targetW || currentW === 0) {
+      return weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays;
+    }
+
+    const kgRemaining = Math.abs(currentW - targetW);
+    const direction   = targetW < currentW ? 'turun' : 'naik';
+
+    const week        = weeklyStats?.week ?? [];
+    const calorieGoal = weeklyStats?.goals?.calories ?? 2000;
+    const loggedDays  = week.filter((d: any) => d.calories > 0);
+    const avgConsumed = loggedDays.length > 0
+      ? loggedDays.reduce((s: number, d: any) => s + d.calories, 0) / loggedDays.length
+      : calorieGoal; // no data yet → assume on-plan
+
+    const adherenceDelta = calorieGoal - avgConsumed;
+    const BASE_PLAN_KCAL = 500;
+
+    const effectiveDaily = Math.max(
+      direction === 'turun'
+        ? BASE_PLAN_KCAL + adherenceDelta   // eating less → bigger deficit
+        : BASE_PLAN_KCAL - adherenceDelta,  // eating more → bigger surplus
+      50  // floor to avoid ÷0
+    );
+
+    return Math.ceil((kgRemaining * 7700) / effectiveDaily);
+  }, [weightTarget, profileData, weeklyStats]);
+
   useFocusEffect(useCallback(() => {
     // Profile + avatar
     getProfile().then(p => {
@@ -796,7 +926,7 @@ export default function ProfileScreen() {
             });
             const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a, b) => a + b, 0) / byMonth[m.key].length : 0);
             const nonZero = values.filter(v => v > 0);
-            return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays, color: DUMMY.weightData.color };
+            return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: dynamicEstimatedDays, color: DUMMY.weightData.color };
           })()}
           dates={weeklyStats?.dates ?? DUMMY.weekDates}
         />
@@ -821,7 +951,7 @@ export default function ProfileScreen() {
               });
               const values = months.map(m => byMonth[m.key] ? byMonth[m.key].reduce((a: number, b: number) => a + b, 0) / byMonth[m.key].length : 0);
               const nonZero = values.filter((v: number) => v > 0);
-              return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays, color: DUMMY.weightData.color };
+              return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: dynamicEstimatedDays, color: DUMMY.weightData.color };
             })()}
             dates={weeklyStats?.dates ?? DUMMY.weekDates}
             remark={getRemarkForState(shareModal)}
@@ -929,27 +1059,16 @@ export default function ProfileScreen() {
                   keyExtractor={(_, i) => `nutrient-${i}`}
                   onMomentumScrollEnd={(e) => setNutrientIndex(Math.round(e.nativeEvent.contentOffset.x / PAGE_WIDTH))}
                   renderItem={({ item }) => (
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={() => openShareModal({
-                          type: 'nutrient',
-                          nutrient: item,
-                          image_url: getRandomMealImage() ?? undefined,
-                        })}
-                      style={{ width: PAGE_WIDTH, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, flex: 1 }}
-                    >
-                      <View style={styles.nutrientHeader}>
-                        <View style={styles.nutrientTitleRow}>
-                          <CalorieIcon width={20} height={20} />
-                          <Text style={styles.nutrientTitle}> {item.label}</Text>
-                        </View>
-                        <View style={styles.nutrientGoalRow}>
-                          <Text style={styles.nutrientGoalBig}>{item.goal}</Text>
-                          <Text style={styles.nutrientGoalUnit}>{item.unit}</Text>
-                        </View>
-                      </View>
-                      <BarChart nutrient={item} dates={dates} />
-                    </TouchableOpacity>
+                    <NutrientCard
+                      item={item}
+                      dates={dates}
+                      pageWidth={PAGE_WIDTH}
+                      onShare={() => openShareModal({
+                        type: 'nutrient',
+                        nutrient: item,
+                        image_url: getRandomMealImage() ?? undefined,
+                      })}
+                    />
                   )}
                 />
                 <View style={[styles.dotsRow, { paddingBottom: 10 }]}>
@@ -998,7 +1117,7 @@ export default function ProfileScreen() {
                     values,
                     startWeight: nonZero[0] ?? DUMMY.weightData.startWeight,
                     goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight,
-                    targetDays: weightTarget?.estimated_days_to_target ?? DUMMY.weightData.targetDays,
+                    targetDays: dynamicEstimatedDays,
                     color: DUMMY.weightData.color,
                   };
                 })()} />
