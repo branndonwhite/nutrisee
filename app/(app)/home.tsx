@@ -470,45 +470,51 @@ export default function HomeScreen() {
       onLayout={(e) => handleCardLayout(2, e.nativeEvent.layout.height)}
     >
       {/* Pencapaian */}
-      <View style={[styles.darkCard, styles.pencapaianCard]}>
-        <Image source={statue} style={styles.pencapaianImage} />
-        <View style={styles.darkCardLabelRow}>
-          <AchievementIcon width={18} height={18} />
-          <Text style={styles.darkCardLabel}> Pencapaian</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(app)/calorie-detail')}>
+        <View style={[styles.darkCard, styles.pencapaianCard]}>
+          <Image source={statue} style={styles.pencapaianImage} />
+          <View style={styles.darkCardLabelRow}>
+            <AchievementIcon width={18} height={18} />
+            <Text style={styles.darkCardLabel}> Pencapaian</Text>
+          </View>
+          <Text style={styles.pencapaianDefisit}>{stats?.pencapaian?.label ?? '-'}</Text>
+          <Text style={styles.pencapaianValue}>
+            <Text style={styles.pencapaianHighlight}>{stats?.pencapaian?.value ?? 0}</Text>
+            {stats?.pencapaian?.unit ?? 'kkal'}
+          </Text>
+          <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{stats?.pencapaian?.description ?? '-'}</Text></Text>
         </View>
-        <Text style={styles.pencapaianDefisit}>{stats?.pencapaian?.label ?? '-'}</Text>
-        <Text style={styles.pencapaianValue}>
-          <Text style={styles.pencapaianHighlight}>{stats?.pencapaian?.value ?? 0}</Text>
-          {stats?.pencapaian?.unit ?? 'kkal'}
-        </Text>
-        <Text style={{color: '#fff'}}>dalam <Text style={styles.pencapaianDescription}>{stats?.pencapaian?.description ?? '-'}</Text></Text>
-      </View>
+      </TouchableOpacity>
 
       {/* Diet */}
-      <View style={[styles.darkCard, styles.dietCard]}>
-        <Image source={body} style={styles.dietImage} />
-        <View style={styles.darkCardLabelRow}>
-          <DietIcon width={18} height={18} />
-          <Text style={styles.darkCardLabel}> Diet</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(app)/weight-detail')}>
+        <View style={[styles.darkCard, styles.dietCard]}>
+          <Image source={body} style={styles.dietImage} />
+          <View style={styles.darkCardLabelRow}>
+            <DietIcon width={18} height={18} />
+            <Text style={styles.darkCardLabel}> Diet</Text>
+          </View>
+          <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{stats?.diet?.kg_remaining?.toFixed(1) ?? '-'}</Text>kg</Text>
+          <Text style={{color: '#fff'}}>{stats?.diet?.direction === 'turun' ? 'Turun' : 'Naik'} menuju <Text style={styles.dietDescription}>target berat</Text></Text>
         </View>
-        <Text style={styles.dietValue}><Text style={{fontSize: 72}}>{stats?.diet?.kg_remaining?.toFixed(1) ?? '-'}</Text>kg</Text>
-        <Text style={{color: '#fff'}}>{stats?.diet?.direction === 'turun' ? 'Turun' : 'Naik'} menuju <Text style={styles.dietDescription}>target berat</Text></Text>
-      </View>
+      </TouchableOpacity>
 
       {/* Favorit */}
-      <View style={[styles.darkCard, styles.favoritCard]}>
-        <Image source={fish} style={styles.favoritImage} />
-        <View style={styles.darkCardLabelRow}>
-          <FavIcon width={18} height={18} />
-          <Text style={styles.darkCardLabel}> Favorit</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(app)/meal-log')}>
+        <View style={[styles.darkCard, styles.favoritCard]}>
+          <Image source={fish} style={styles.favoritImage} />
+          <View style={styles.darkCardLabelRow}>
+            <FavIcon width={18} height={18} />
+            <Text style={styles.darkCardLabel}> Favorit</Text>
+          </View>
+          <Text style={styles.favoritLabel}>{stats?.favorit?.food_name ?? '🍽️'}</Text>
+          <Text style={styles.favoritDescription}>
+            {'Kamu mencatatnya sebanyak '}
+            <Text style={{fontFamily: FONTS.bold}}>{stats?.favorit?.count ?? 0}x</Text>
+            {' dalam\nseminggu ini!'}
+          </Text>
         </View>
-        <Text style={styles.favoritLabel}>{stats?.favorit?.food_name ?? '🍽️'}</Text>
-        <Text style={styles.favoritDescription}>
-          {'Kamu mencatatnya sebanyak '}
-          <Text style={{fontFamily: FONTS.bold}}>{stats?.favorit?.count ?? 0}x</Text>
-          {' dalam\nseminggu ini!'}
-        </Text>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 

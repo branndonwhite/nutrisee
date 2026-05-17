@@ -1,0 +1,44 @@
+name: EAS Build
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - defect-fixing   # add any other branches you want to trigger builds
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # CI just queues the build, actual build runs on Expo servers
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine build profile
+        id: profile
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/master" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+          else
+            echo "profile=preview" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger EAS Build
+        run: eas build --platform android --profile ${{ steps.profile.outputs.profile }} --non-interactive --no-wait
