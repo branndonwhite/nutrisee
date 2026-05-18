@@ -55,6 +55,11 @@ export default function DietGoalScreen() {
 
       {/* Diet Goal Card */}
       <View style={styles.card}>
+        <Image
+          source={require('../../assets/images/abstract/Protein 3.png')}
+          style={styles.cardAbstract}
+          resizeMode="contain"
+        />
         <Text style={styles.cardTitle}>Tujuan diet saya adalah...</Text>
         <View style={styles.optionsContainer}>
           {DIET_GOALS.map((goal) => (
@@ -131,10 +136,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     paddingBottom: 12,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  cardAbstract: {
+    position: 'absolute',
+    top: -15,
+    alignSelf: 'center',
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 1.1 }],
   },
   cardTitle: {
     fontFamily: FONTS.boldItalic,
-    fontSize: 20,
+    fontSize: 18,
     color: '#fff',
     textAlign: 'center',
     marginBottom: 20,

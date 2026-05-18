@@ -174,6 +174,11 @@ export default function HeightScreen() {
         {/* Left side — card centered vertically */}
         <View style={styles.cardWrapper}>
           <View style={styles.heightCard}>
+            <Image
+              source={require('../../assets/images/abstract/Protein 3.png')}
+              style={styles.heightCardAbstract}
+              resizeMode="contain"
+            />
             <Text style={styles.heightCardTitle}>Tinggi Badan</Text>
             <View style={styles.heightDisplay}>
               <TextInput
@@ -268,10 +273,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     width: 220,
+    overflow: 'hidden',
+  },
+  heightCardAbstract: {
+    position: 'absolute',
+    top: -15,
+    alignSelf: 'center',
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 1.1 }],
   },
   heightCardTitle: {
     fontFamily: FONTS.boldItalic,
-    fontSize: 22,
+    fontSize: 18,
     color: "#fff",
     marginBottom: 8,
     paddingHorizontal: 8,

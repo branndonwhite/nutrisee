@@ -77,6 +77,11 @@ export default function ActivityLevelScreen() {
 
       {/* Activity Card */}
       <View style={styles.card}>
+        <Image
+          source={require('../../assets/images/abstract/Protein 3.png')}
+          style={styles.cardAbstract}
+          resizeMode="contain"
+        />
         <Text style={styles.cardTitle}>Seberapa aktif saya dalam sehari</Text>
         <View style={styles.optionsContainer}>
           {ACTIVITY_LEVELS.map((level) => (
@@ -167,6 +172,16 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginHorizontal: 24,
     marginBottom: 6,
+    overflow: 'hidden',
+  },
+  cardAbstract: {
+    position: 'absolute',
+    top: -15,
+    alignSelf: 'center',
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 1.1 }],
   },
   cardTitle: {
     fontFamily: FONTS.boldItalic,

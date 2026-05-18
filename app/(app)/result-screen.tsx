@@ -414,7 +414,7 @@ export default function ResultScreen() {
         {/* ── Card 3: Location + Time ── */}
         <Animated.View style={[styles.metaRow, animStyle(3)]}>
           <View style={styles.locationCard}>
-            <LocationIcon width={25} height={36} style={styles.locationIcon} />
+            <LocationIcon width={25} height={36} fill="#fff" style={styles.locationIcon} />
             <View style={styles.locationTextBox}>
               <Text style={styles.locationText}>{data.location}</Text>
             </View>

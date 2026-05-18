@@ -192,6 +192,11 @@ export default function ScanTextScreen() {
       >
         {/* ── Input Card ── */}
         <View style={styles.inputCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 5.png')}
+            style={styles.inputCardAbstract}
+            resizeMode="contain"
+          />
           <TextInput
             style={styles.textInput}
             placeholder={
@@ -366,6 +371,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 12,
     gap: 12,
+    overflow: 'hidden',
+  },
+  inputCardAbstract: {
+    position: 'absolute',
+    bottom: -58,
+    left: -35,
+    width: 150,
+    height: 150,
+    opacity: 0.5,
+    transform: [{ translateX: -10 }, { rotate: '-55deg' }, { scale: 1 }],
   },
   textInput: {
     backgroundColor: WHITE,
