@@ -1027,6 +1027,15 @@ export default function ProfileScreen() {
     setShareModal(state);
   }, []);
 
+  // Drives header background fade-in and profile card sticky effect
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerBgOpacity = scrollY.interpolate({
+    inputRange: [0, 90],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+
   const handleProfileImagePress = useCallback(() => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -1153,22 +1162,22 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Header */}
-      <BlurContainer intensity={60} tint="light" style={styles.header}
-        androidFallbackColor="rgba(245,245,245,0.95)" gradientDirection="header">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <BackArrowIcon width={10} height={15} fill="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Statistik Nutrisi</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={{ width: 32 }} />
-      </BlurContainer>
+      {/* Header background — fades in as user scrolls */}
+      <Animated.View style={[styles.header, { opacity: headerBgOpacity }]} pointerEvents="none">
+        <BlurContainer intensity={60} tint="light" style={StyleSheet.absoluteFill}
+          androidFallbackColor="rgba(245,245,245,0.95)" gradientDirection="header" />
+      </Animated.View>
+      {/* Header content — always visible */}
+      <View style={styles.header} pointerEvents="box-none">
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <BackArrowIcon width={10} height={15} fill="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Statistik Nutrisi</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── Profile Card ─────────────────────────────── */}
+      {/* ── Profile Card — fixed, never scrolls ─────────── */}
+      <View style={styles.profileCardWrapper}>
         <View style={styles.profileCard}>
           <TouchableOpacity style={styles.avatarWrapper} onPress={handleProfileImagePress} activeOpacity={0.8}>
             <View style={styles.avatar}>
@@ -1193,9 +1202,33 @@ export default function ProfileScreen() {
             <Text style={styles.streakLabel}>HARI{'\n'}log streak</Text>
           </View>
         </View>
+        <BlurContainer
+          intensity={40}
+          tint="light"
+          gradientDirection="header"
+          androidFallbackColor="rgba(245,245,245,0)"
+          style={styles.profileCardFade}
+        />
+      </View>
+
+      <Animated.ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+        scrollEventThrottle={16}
+      >
 
         {/* ── AI Tips ───────────────────────────────────── */}
         <View style={styles.aiCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 5.png')}
+            style={styles.aiCardAbstract}
+            resizeMode="contain"
+          />
           <View style={styles.aiHeader}>
             <View style={styles.aiTitleRow}>
               <AIOverviewIcon width={20} height={20} />
@@ -1227,6 +1260,11 @@ export default function ProfileScreen() {
 
         {/* ── Nutrient Tracker ─────────────────────────── */}
         <View style={styles.darkCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 3.png')}
+            style={styles.darkCardAbstract}
+            resizeMode="contain"
+          />
           {(() => {
             const goals = weeklyStats?.goals;
             const week = weeklyStats?.week ?? [];
@@ -1272,6 +1310,11 @@ export default function ProfileScreen() {
         <View style={styles.darkCard}>
           <TouchableOpacity activeOpacity={0.85} onPress={() => openShareModal({ type: 'weight', image_url: getRandomMealImage() ?? undefined })}>
             <View style={styles.darkCard}>
+              <Image
+                source={require('../../assets/images/abstract/Protein 3.png')}
+                style={styles.darkCardAbstract}
+                resizeMode="contain"
+              />
               <View style={styles.weightHeader}>
                 <View style={styles.weightTitleRow}>
                   <WeightIcon width={22} height={22} />
@@ -1335,6 +1378,11 @@ export default function ProfileScreen() {
 
         {/* ── Log Makanan ───────────────────────────────── */}
         <View style={styles.logCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 5.png')}
+            style={styles.logCardAbstract}
+            resizeMode="contain"
+          />
           <View style={styles.logHeader}>
             <AIOverviewIcon width={20} height={20} />
             <Text style={styles.logTitle}> Log Makanan</Text>
@@ -1418,6 +1466,11 @@ export default function ProfileScreen() {
 
         {/* ── Badges ───────────────────────────────────── */}
         <View style={styles.badgeCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 3.png')}
+            style={styles.badgeCardAbstract}
+            resizeMode="contain"
+          />
           <View style={styles.badgeHeader}>
             <View style={styles.badgeTitleRow}>
               <AchievementIcon width={20} height={20} />
@@ -1466,7 +1519,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
         <View style={{ height: 40 }} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -1491,7 +1544,22 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: FONTS.bold, fontSize: 18, color: COLORS.text },
   headerSpacer: { width: 36 },
   scroll: { flex: 1 },
-  scrollContent: { paddingTop: 126, paddingHorizontal: 16, gap: 16 },
+  scrollContent: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 40, gap: 16 },
+  profileCardWrapper: {
+    paddingTop: 110,        // clear the absolute header
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: '#F5F5F5',
+  },
+  profileCardFade: {
+    position: 'absolute',
+    bottom: -10,
+    left: 0,
+    right: 0,
+    height: 14,
+    zIndex: 5,
+    pointerEvents: 'none' as any,
+  },
 
   profileCard: { backgroundColor: '#013397', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatarWrapper: { position: 'relative' },
@@ -1508,6 +1576,15 @@ const styles = StyleSheet.create({
   streakLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 13 },
 
   aiCard: { backgroundColor: '#024FE9', borderRadius: 20, paddingTop: 14, paddingBottom: 14, overflow: 'hidden' },
+  aiCardAbstract: {
+    position: 'absolute',
+    top: -15,
+    left: -35,
+    width: 150,
+    height: 150,
+    opacity: 0.5,
+    transform: [{ translateX: -10 }, { rotate: '-65deg' }, { scale: 1.2 }],
+  },
   aiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 16 },
   aiTitleRow: { flexDirection: 'row', alignItems: 'center' },
   aiTitle: { fontFamily: FONTS.bold, fontSize: 17, color: '#fff' },
@@ -1521,6 +1598,15 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: '#fff', width: 20, borderRadius: 4 },
 
   darkCard: { backgroundColor: '#1A1A1A', borderRadius: 20, overflow: 'hidden' },
+  darkCardAbstract: {
+    position: 'absolute',
+    top: -44,
+    right: -15,
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 0.9 }],
+  },
   nutrientHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   nutrientTitleRow: { flexDirection: 'row', alignItems: 'center' },
   nutrientTitle: { fontFamily: FONTS.extraBold, fontSize: 20, color: '#fff' },
@@ -1536,6 +1622,15 @@ const styles = StyleSheet.create({
   weightTargetValue: { fontFamily: FONTS.extraBold, fontSize: 24, color: '#fff' },
 
   logCard: { backgroundColor: '#024FE9', borderRadius: 20, paddingTop: 16, paddingBottom: 16, overflow: 'hidden' },
+  logCardAbstract: {
+    position: 'absolute',
+    top: -15,
+    left: -35,
+    width: 150,
+    height: 150,
+    opacity: 0.5,
+    transform: [{ translateX: -10 }, { rotate: '-65deg' }, { scale: 1.2 }],
+  },
   logHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 14 },
   logTitle: { fontFamily: FONTS.extraBold, fontSize: 22, color: '#fff' },
   daySelectorContainer: { marginHorizontal: 12, marginBottom: 12, backgroundColor: '#fff', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 4 },
@@ -1557,7 +1652,16 @@ const styles = StyleSheet.create({
   logMacro: { fontFamily: FONTS.regular, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   logEditBtn: { padding: 4 },
 
-  badgeCard: { backgroundColor: '#1A1A1A', borderRadius: 20, padding: 16 },
+  badgeCard: { backgroundColor: '#1A1A1A', borderRadius: 20, padding: 16, overflow: 'hidden' },
+  badgeCardAbstract: {
+    position: 'absolute',
+    top: -44,
+    right: -15,
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 0.9 }],
+  },
   badgeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   badgeTitleRow: { flexDirection: 'row', alignItems: 'center' },
   badgeTitle: { fontFamily: FONTS.extraBold, fontSize: 20, color: '#fff' },

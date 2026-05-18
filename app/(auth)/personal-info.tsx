@@ -8,7 +8,7 @@ import {
   ScrollView,
   Platform,
   Image,
-  PixelRatio
+  PixelRatio,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FONTS } from '../../constants/fonts';
@@ -34,45 +34,34 @@ export default function PersonalInfoScreen() {
 
   const genderValueRef = useRef<View>(null);
   const dateValueRef = useRef<View>(null);
-  const [valueLayout, setValueLayout] = useState({ 
-    top: 0, 
-    left: 0,
-    width: 0,
-  });
+  const [valueLayout, setValueLayout] = useState({ top: 0, left: 0, width: 0 });
   const scrollRef = useRef<ScrollView>(null);
   const [scrollY, setScrollY] = useState(0);
 
   const openGenderPicker = () => {
     genderValueRef.current?.measureInWindow((gx, gy, gwidth, gheight) => {
-      setValueLayout({
-        top: gy + gheight,
-        left: gx,
-        width: gwidth,
-      });
+      setValueLayout({ top: gy + gheight, left: gx, width: gwidth });
       setShowGenderPicker(true);
     });
   };
 
   const handleSubmit = () => {
-  if (!nickname || !gender || !dateOfBirth) {
-    Alert.alert('Error', 'Semua field harus diisi');
-    return;
-  }
-
-  // save to context only, no API call
-  setData({
-    nickname,
-    gender,
-    date_of_birth: dateOfBirth.toISOString().split('T')[0],
-  });
-
-  router.push('/(auth)/weight'); 
-};
+    if (!nickname || !gender || !dateOfBirth) {
+      Alert.alert('Error', 'Semua field harus diisi');
+      return;
+    }
+    setData({
+      nickname,
+      gender,
+      date_of_birth: dateOfBirth.toISOString().split('T')[0],
+    });
+    router.push('/(auth)/weight');
+  };
 
   const formatDate = (date: Date) => {
-    const day = String(date.getDate()).padStart(2, '0');
+    const day   = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+    const year  = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
@@ -109,6 +98,11 @@ export default function PersonalInfoScreen() {
 
         {/* Nickname Input Card */}
         <View style={styles.nicknameCard}>
+          <Image
+            source={require('../../assets/images/abstract/Protein 5.png')}
+            style={styles.nicknameCardAbstract}
+            resizeMode="contain"
+          />
           <View style={styles.nicknameCardHeader}>
             <Text style={styles.nicknameCardTitle}>Halo, nama saya adalah...</Text>
             <NIcon width={28} height={28} />
@@ -142,9 +136,7 @@ export default function PersonalInfoScreen() {
               <Text style={[styles.fieldValue, !gender && styles.fieldPlaceholder]}>
                 {gender || 'Pilih'}
               </Text>
-              <Text style={styles.dropdownArrow}>
-                {showGenderPicker ? '▲' : '▼'}
-              </Text>
+              <Text style={styles.dropdownArrow}>{showGenderPicker ? '▲' : '▼'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -161,10 +153,7 @@ export default function PersonalInfoScreen() {
               onPress={() => setShowDatePicker(true)}
               activeOpacity={0.8}
             >
-              <Text style={[
-                styles.fieldValue,
-                !dateOfBirth && styles.fieldPlaceholder
-              ]}>
+              <Text style={[styles.fieldValue, !dateOfBirth && styles.fieldPlaceholder]}>
                 {dateOfBirth ? formatDate(dateOfBirth) : 'DD/MM/YYYY'}
               </Text>
             </TouchableOpacity>
@@ -184,20 +173,13 @@ export default function PersonalInfoScreen() {
 
         {/* iOS Date Picker Done Button */}
         {showDatePicker && Platform.OS === 'ios' && (
-          <TouchableOpacity
-            style={styles.doneButton}
-            onPress={() => setShowDatePicker(false)}
-          >
+          <TouchableOpacity style={styles.doneButton} onPress={() => setShowDatePicker(false)}>
             <Text style={styles.doneButtonText}>Selesai</Text>
           </TouchableOpacity>
         )}
 
         {/* Lanjutkan Button */}
-        <TouchableOpacity 
-          style={styles.primaryButton} 
-          onPress={handleSubmit}    
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit} disabled={loading}>
           {loading
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.primaryButtonText}>Lanjutkan</Text>
@@ -210,6 +192,7 @@ export default function PersonalInfoScreen() {
           anda hanya untuk kebutuhan fungsional aplikasi.
         </Text>
       </ScrollView>
+
       {/* Dim overlay + dropdown OUTSIDE ScrollView */}
       {showGenderPicker && (
         <>
@@ -218,30 +201,18 @@ export default function PersonalInfoScreen() {
             activeOpacity={1}
             onPress={() => setShowGenderPicker(false)}
           />
-          <View style={[
-            styles.dropdown,
-            {
-              top: valueLayout.top,
-              left: valueLayout.left,
-              width: valueLayout.width,
-            }
-          ]}>
+          <View style={[styles.dropdown, {
+            top: valueLayout.top,
+            left: valueLayout.left,
+            width: valueLayout.width,
+          }]}>
             {GENDER_OPTIONS.map((item) => (
               <TouchableOpacity
                 key={item}
-                style={[
-                  styles.dropdownOption,
-                  gender === item && styles.dropdownOptionSelected,
-                ]}
-                onPress={() => {
-                  setGender(item);
-                  setShowGenderPicker(false);
-                }}
+                style={[styles.dropdownOption, gender === item && styles.dropdownOptionSelected]}
+                onPress={() => { setGender(item); setShowGenderPicker(false); }}
               >
-                <Text style={[
-                  styles.dropdownOptionText,
-                  gender === item && styles.dropdownOptionTextSelected,
-                ]}>
+                <Text style={[styles.dropdownOptionText, gender === item && styles.dropdownOptionTextSelected]}>
                   {item}
                 </Text>
               </TouchableOpacity>
@@ -260,10 +231,7 @@ const styles = StyleSheet.create({
   },
   dimOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.3)',
     zIndex: 10,
   },
@@ -284,14 +252,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FONTS.semiBold,
-    fontSize: 22,
+    fontSize: 18,
     color: COLORS.text,
     textAlign: 'center',
   },
-  logo: {
-    width: 110,
-    height: 49,
-  },
+  logo: { width: 110, height: 49 },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 12,
@@ -301,10 +266,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   nicknameCard: {
-    backgroundColor: '#013397',
+    backgroundColor: '#024FE9',
     borderRadius: 20,
     padding: 10,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  nicknameCardAbstract: {
+    position: 'absolute',
+    top: -15,
+    left: -35,
+    width: 150,
+    height: 150,
+    opacity: 0.5,
+    transform: [{ translateX: -10 }, { rotate: '-65deg' }, { scale: 1.2 }],
   },
   nicknameCardHeader: {
     flexDirection: 'row',
@@ -314,7 +289,7 @@ const styles = StyleSheet.create({
   },
   nicknameCardTitle: {
     fontFamily: FONTS.boldItalic,
-    fontSize: 22,
+    fontSize: 18,
     color: '#fff',
   },
   nicknameInput: {
@@ -323,10 +298,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 40,
     fontFamily: FONTS.medium,
-    fontSize: 22,
-    color: '#013397',
+    fontSize: 18,
+    color: '#024FE9',
     textAlign: 'center',
-    minHeight: 170
+    minHeight: 170,
   },
   fieldWrapper: {
     position: 'relative',
@@ -339,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#024FE9',
     borderRadius: 20,
     padding: 6,
-    paddingRight: 8
+    paddingRight: 8,
   },
   fieldLabelContainer: {
     paddingHorizontal: 16,
@@ -348,7 +323,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: FONTS.semiBoldItalic,
-    fontSize: 18,
+    fontSize: 15,
     color: '#fff',
   },
   fieldValueContainer: {
@@ -358,21 +333,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff', 
+    backgroundColor: '#fff',
     borderRadius: 15,
   },
   fieldValue: {
     fontFamily: FONTS.medium,
-    fontSize: 18,
+    fontSize: 15,
     color: COLORS.text,
   },
-  fieldPlaceholder: {
-    color: COLORS.placeholder,
-  },
-  dropdownArrow: {
-    fontSize: 10,
-    color: COLORS.placeholder,
-  },
+  fieldPlaceholder: { color: COLORS.placeholder },
+  dropdownArrow: { fontSize: 10, color: COLORS.placeholder },
   dropdown: {
     position: 'absolute',
     backgroundColor: '#fff',
@@ -385,33 +355,17 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: 'hidden',
   },
-  dropdownOption: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  dropdownOptionSelected: {
-    backgroundColor: '#EFF6FF',
-  },
+  dropdownOption: { paddingVertical: 16, paddingHorizontal: 16 },
+  dropdownOptionSelected: { backgroundColor: '#EFF6FF' },
   dropdownOptionText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
     color: COLORS.text,
     textAlign: 'center',
   },
-  dropdownOptionTextSelected: {
-    color: '#024FE9',
-    fontFamily: FONTS.semiBold,
-  },
-  doneButton: {
-    alignItems: 'flex-end',
-    paddingVertical: 8,
-    marginBottom: 8,
-  },
-  doneButtonText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 16,
-    color: '#024FE9',
-  },
+  dropdownOptionTextSelected: { color: '#024FE9', fontFamily: FONTS.semiBold },
+  doneButton: { alignItems: 'flex-end', paddingVertical: 8, marginBottom: 8 },
+  doneButtonText: { fontFamily: FONTS.semiBold, fontSize: 16, color: '#024FE9' },
   primaryButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 20,
@@ -422,7 +376,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
-    fontSize: 18,
+    fontSize: 15,
     color: COLORS.white,
   },
   footerNote: {
@@ -431,43 +385,5 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  modalTitle: {
-    fontFamily: FONTS.bold,
-    fontSize: 16,
-    color: COLORS.text,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalOption: {
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  modalOptionSelected: {
-    backgroundColor: '#EFF6FF',
-  },
-  modalOptionText: {
-    fontFamily: FONTS.medium,
-    fontSize: 16,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  modalOptionTextSelected: {
-    color: '#2563EB',
-    fontFamily: FONTS.semiBold,
   },
 });

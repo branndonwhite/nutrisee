@@ -309,7 +309,7 @@ export default function WeightScreen() {
               x={labelX}
               y={labelY + 4}
               textAnchor="middle"
-              fontSize={23}
+              fontSize={isTen ? 23 : 16}
               fill="#888"
               fontFamily={FONTS.bold}
             >
@@ -377,6 +377,11 @@ export default function WeightScreen() {
 
       {/* Weight Card */}
       <View style={[styles.weightCard, isUpdate && styles.weightCardUpdate]}>
+        <Image
+          source={require('../../assets/images/abstract/Protein 3.png')}
+          style={styles.weightCardAbstract}
+          resizeMode="contain"
+        />
         {/* Tab switcher — update mode only */}
         {isUpdate ? (
           <View style={styles.tabBar}>
@@ -583,6 +588,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  weightCardAbstract: {
+    position: 'absolute',
+    top: -15,
+    alignSelf: 'center',
+    width: 150,
+    height: 150,
+    opacity: 0.4,
+    transform: [{ rotate: '40deg' }, { scale: 1.1 }],
   },
   weightCardUpdate: {
     marginTop: 20,
