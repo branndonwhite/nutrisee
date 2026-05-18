@@ -103,6 +103,25 @@ type ShareModalState =
   | { type: 'nutrient'; nutrient: Nutrient; image_url?: string }
   | { type: 'weight'; image_url?: string }
 
+// ─── Badge metadata ───────────────────────────────────────────────────────────
+const BADGE_META: Record<string, { name: string; progressLabel: string; motivationText: string }> = {
+  cons_7:    { name: '7 Hari Konsisten',      progressLabel: 'Hari Log Berturut-turut', motivationText: 'Ayo terus konsisten'      },
+  cons_30:   { name: '30 Hari Konsisten',     progressLabel: 'Hari Log Berturut-turut', motivationText: 'Ayo terus konsisten'      },
+  cons_365:  { name: '365 Hari Konsisten',    progressLabel: 'Hari Log Berturut-turut', motivationText: 'Ayo terus konsisten'      },
+  food_10:   { name: '10 Makanan Tercatat',   progressLabel: 'Makanan Tercatat',        motivationText: 'Ayo terus scan makananmu' },
+  food_100:  { name: '100 Makanan Tercatat',  progressLabel: 'Makanan Tercatat',        motivationText: 'Ayo terus scan makananmu' },
+  food_1000: { name: '1000 Makanan Tercatat', progressLabel: 'Makanan Tercatat',        motivationText: 'Ayo terus scan makananmu'      },
+  share:     { name: 'Berbagi Progress',      progressLabel: 'Progress Dibagikan',      motivationText: 'Ayo bagikan progressmu'   },
+  nutrisi:   { name: 'Pantau Nutrisi',        progressLabel: 'Nutrisi Dipantau',        motivationText: 'Ayo pantau nutrisimu'     },
+  berat:     { name: 'Capai Target Berat',    progressLabel: 'Target Berat Badan',      motivationText: 'Ayo capai target beratmu' },
+};
+
+const BADGE_TARGETS: Record<string, number | null> = {
+  cons_7: 7, cons_30: 30, cons_365: 365,
+  food_10: 10, food_100: 100, food_1000: 1000,
+  share: 1, nutrisi: 1, berat: null,
+};
+
 // ─── Dummy data ───────────────────────────────────────────────────────────────
 const DUMMY = {
   fullName: 'Martinus Nathanael',
@@ -652,6 +671,150 @@ const ShareModal: React.FC<{
   );
 };
 
+// ─── Badge Modal ──────────────────────────────────────────────────────────────
+const BadgeModal: React.FC<{
+  badge: typeof DUMMY.badges[0];
+  progress: number;
+  onClose: () => void;
+}> = ({ badge, progress, onClose }) => {
+  const meta    = BADGE_META[badge.key];
+  const target  = BADGE_TARGETS[badge.key];
+  const achieved = badge.achieved;
+  const badgeShotRef = useRef<ViewShot | null>(null);
+
+  const handleSave = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin diperlukan', 'Izinkan akses galeri untuk menyimpan gambar.');
+        return;
+      }
+      const uri = await (badgeShotRef.current as any).capture();
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Tersimpan!', 'Badge berhasil disimpan ke galeri.');
+    } catch (e) {
+      Alert.alert('Gagal', `Tidak dapat menyimpan gambar: ${e}`);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const uri = await (badgeShotRef.current as any).capture();
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Bagikan Badge' });
+      } else {
+        await Share.share({ url: uri, message: 'Lihat badge saya di Nutrisee!' });
+      }
+    } catch (e) {
+      Alert.alert('Gagal', 'Tidak dapat membagikan gambar.');
+    }
+  };
+
+  const progressRatio = target !== null && target > 0 ? Math.min(progress / target, 1) : 0;
+
+  return (
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <StatusBar barStyle="light-content" />
+      {Platform.OS === 'ios'
+        ? <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+        : <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)' }]} />
+      }
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+
+      <View style={bmStyles.container} pointerEvents="box-none">
+        {achieved ? (
+          <>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <Text style={bmStyles.congratsText}>Selamat! 🎉</Text>
+              <Text style={bmStyles.congratsSub}>Kamu telah menyelesaikan pencapaian ini</Text>
+            </View>
+
+            {/* Capture card */}
+            <TouchableOpacity activeOpacity={1}>
+              <ViewShot ref={badgeShotRef} options={{ format: 'jpg', quality: 0.95 }}>
+                <View style={bmStyles.captureCard}>
+                  <Image source={badge.image} style={bmStyles.badgeImageLarge} resizeMode="contain" />
+                  <Text style={bmStyles.badgeName}>{meta?.name ?? badge.key}</Text>
+                  <Image source={LOGO_COLORED} style={bmStyles.logo} resizeMode="contain" />
+                </View>
+              </ViewShot>
+            </TouchableOpacity>
+
+            {/* Action buttons */}
+            <View style={shareStyles.actionRow}>
+              <TouchableOpacity style={shareStyles.actionBtn} onPress={handleSave}>
+                <View style={[shareStyles.actionIcon, { backgroundColor: '#FF3E00' }]}>
+                  <DownloadIcon width={22} height={22} />
+                </View>
+                <Text style={shareStyles.actionLabel}>Simpan{'\n'}Badge</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={shareStyles.actionBtn} onPress={handleShare}>
+                <View style={[shareStyles.actionIcon, { backgroundColor: '#024FE9' }]}>
+                  <ShareIcon width={22} height={22} />
+                </View>
+                <Text style={shareStyles.actionLabel}>Bagikan{'\n'}Badge</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={bmStyles.lockedTitle}>Badge Terkunci 🔒</Text>
+            <View style={bmStyles.lockedCard}>
+              <Image source={badge.imageOff} style={bmStyles.badgeImageLarge} resizeMode="contain" />
+              {target !== null ? (
+                <>
+                  <Text style={bmStyles.progressValue}>{progress} <Text style={bmStyles.progressValueSub}>/ {target}</Text></Text>
+                  <Text style={bmStyles.progressLabel}>{meta?.progressLabel ?? ''}</Text>
+                  <View style={bmStyles.progressTrack}>
+                    <View style={[bmStyles.progressFill, { flex: Math.max(progressRatio, 0.001) }]} />
+                    <View style={{ flex: Math.max(1 - progressRatio, 0.001) }} />
+                  </View>
+                </>
+              ) : (
+                <Text style={bmStyles.progressLabel}>{meta?.progressLabel ?? ''}</Text>
+              )}
+              <Text style={bmStyles.motivationText}>{meta?.motivationText ?? ''}</Text>
+              <Image source={LOGO_COLORED} style={bmStyles.logoSmall} resizeMode="contain" />
+            </View>
+          </>
+        )}
+      </View>
+    </Modal>
+  );
+};
+
+const bmStyles = StyleSheet.create({
+  container:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, paddingHorizontal: 24 },
+  congratsText: { fontFamily: FONTS.extraBold, fontSize: 28, color: '#fff', textAlign: 'center' },
+  congratsSub:  { fontFamily: FONTS.regular, fontSize: 15, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
+  captureCard: {
+    backgroundColor: '#1A1A1A', borderRadius: 24, padding: 32,
+    alignItems: 'center', gap: 16, width: SCREEN_WIDTH - 80,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  badgeImageLarge: { width: 160, height: 160 },
+  badgeName: { fontFamily: FONTS.extraBold, fontSize: 20, color: '#fff', textAlign: 'center' },
+  logo:       { width: 110, height: 36 },
+
+  lockedTitle: { fontFamily: FONTS.extraBold, fontSize: 24, color: '#fff', textAlign: 'center' },
+  lockedCard: {
+    backgroundColor: 'rgba(26,26,26,0.92)', borderRadius: 24, padding: 28,
+    alignItems: 'center', gap: 12, width: SCREEN_WIDTH - 80,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  progressValue:    { fontFamily: FONTS.extraBold, fontSize: 32, color: '#fff' },
+  progressValueSub: { fontFamily: FONTS.regular,   fontSize: 20, color: 'rgba(255,255,255,0.5)' },
+  progressLabel:    { fontFamily: FONTS.regular, fontSize: 14, color: 'rgba(255,255,255,0.65)', textAlign: 'center' },
+  progressTrack: {
+    flexDirection: 'row', height: 8, backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10, overflow: 'hidden', width: '100%',
+  },
+  progressFill:   { backgroundColor: '#FF3E00', borderRadius: 10 },
+  motivationText: { fontFamily: FONTS.bold, fontSize: 15, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 4 },
+  logoSmall:      { width: 90, height: 30, marginTop: 4, opacity: 0.55 },
+});
+
 const shareStyles = StyleSheet.create({
   modalContent: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24, paddingHorizontal: 24 },
   tagline: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', textAlign: 'center', lineHeight: 28 },
@@ -749,6 +912,7 @@ export default function ProfileScreen() {
   const [aiTips, setAiTips] = useState<typeof DUMMY.aiTips>(DUMMY.aiTips);
   const [weeklyStats, setWeeklyStats] = useState<{ week: any[]; dates: string[]; goals: any } | null>(null);
   const [badgeStates, setBadgeStates] = useState<Record<string, boolean>>({});
+  const [selectedBadge, setSelectedBadge] = useState<typeof DUMMY.badges[0] | null>(null);
 
   // ── Dynamic days-to-goal estimation ────────────────────────────────
   // Formula: effectiveDaily = BASE_PLAN (500 kcal) + adherence delta
@@ -785,6 +949,20 @@ export default function ProfileScreen() {
 
     return Math.ceil((kgRemaining * 7700) / effectiveDaily);
   }, [weightTarget, profileData, weeklyStats]);
+
+  // Compute current progress toward a badge based on available local data
+  const getBadgeProgress = useCallback((key: string): number => {
+    if (key.startsWith('cons_')) return streak;
+    if (key.startsWith('food_')) return mealLogs.length;
+    if (key === 'share')   return badgeStates['share']   ? 1 : 0;
+    if (key === 'nutrisi') return badgeStates['nutrisi'] ? 1 : 0;
+    if (key === 'berat') {
+      const cw = weightTarget?.current_weight ?? 0;
+      const tw = weightTarget?.target_weight  ?? null;
+      return tw !== null && cw > 0 && Math.abs(cw - tw) < 0.5 ? 1 : 0;
+    }
+    return 0;
+  }, [streak, mealLogs, badgeStates, weightTarget]);
 
   useFocusEffect(useCallback(() => {
     // Profile + avatar
@@ -929,6 +1107,15 @@ export default function ProfileScreen() {
             return { dates: months.map(m => m.label), values, startWeight: nonZero[0] ?? DUMMY.weightData.startWeight, goalWeight: weightTarget?.target_weight ?? DUMMY.weightData.goalWeight, targetDays: dynamicEstimatedDays, color: DUMMY.weightData.color };
           })()}
           dates={weeklyStats?.dates ?? DUMMY.weekDates}
+        />
+      )}
+
+      {/* Badge Modal */}
+      {selectedBadge && (
+        <BadgeModal
+          badge={selectedBadge}
+          progress={getBadgeProgress(selectedBadge.key)}
+          onClose={() => setSelectedBadge(null)}
         />
       )}
 
@@ -1234,7 +1421,7 @@ export default function ProfileScreen() {
           <View style={styles.badgeHeader}>
             <View style={styles.badgeTitleRow}>
               <AchievementIcon width={20} height={20} />
-              <Text style={styles.badgeTitle}> Badges</Text>
+              <Text style={styles.badgeTitle}> Pencapaian</Text>
             </View>
             <Text style={styles.badgeCount}>
               <Text style={styles.badgeCountNum}>{DUMMY.badges.filter(b => badgeStates[b.key] ?? b.achieved).length}/{DUMMY.badges.length}</Text>
@@ -1244,10 +1431,16 @@ export default function ProfileScreen() {
           <View style={styles.badgeGrid}>
             {DUMMY.badges.map((badge) => {
               const achieved = badgeStates[badge.key] ?? badge.achieved;
+              const resolvedBadge = { ...badge, achieved };
               return (
-                <View key={badge.key} style={styles.badgeItem}>
+                <TouchableOpacity
+                  key={badge.key}
+                  style={styles.badgeItem}
+                  activeOpacity={0.75}
+                  onPress={() => setSelectedBadge(resolvedBadge)}
+                >
                   <Image source={achieved ? badge.image : badge.imageOff} style={styles.badgeImage} resizeMode="contain" />
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
