@@ -17,10 +17,10 @@
       }
     },
     "android": {
-      "icon": "./assets/images/ICON_N_android.png",
+      "icon": "./assets/images/ICON_N.png",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/ICON_N_android.png"
+        "foregroundImage": "./assets/images/ICON_N.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
