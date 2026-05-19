@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Props = {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   intensity?: number;
   tint?: 'light' | 'dark' | 'default';
   style?: StyleProp<ViewStyle>;
