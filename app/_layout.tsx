@@ -41,7 +41,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Splash is hidden by index.tsx after routing logic completes.
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;

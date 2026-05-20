@@ -19,8 +19,8 @@
     "android": {
       "icon": "./assets/images/ICON_N.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/ICON_N.png"
+        "foregroundImage": "./assets/images/bg/Icon_N.png",
+        "backgroundImage": "./assets/images/Icon_BG.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -40,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/bg/SPLASH_PAGE.png",
+          "image": "./assets/images/bg/SPLASH_Background.png",
           "resizeMode": "cover",
           "backgroundColor": "#1a237e",
           "dark": {
