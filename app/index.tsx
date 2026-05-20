@@ -11,8 +11,6 @@ export default function IndexScreen() {
     (async () => {
       const MINIMUM_MS = 2500;
 
-      // Run routing logic and minimum timer in parallel so the native splash
-      // is always visible for at least 2.5 seconds.
       const [route] = await Promise.all([
         (async (): Promise<string> => {
           const token = await SecureStore.getItemAsync('token');
@@ -29,12 +27,10 @@ export default function IndexScreen() {
         new Promise<void>(resolve => setTimeout(resolve, MINIMUM_MS)),
       ]);
 
-      // Hide the native splash right before navigating — single clean transition.
       await SplashScreen.hideAsync();
       router.replace(route as any);
     })();
   }, []);
 
-  // Native splash is still covering the screen — nothing to render.
-  return <View style={{ flex: 1 }} />;
+  return <View style={{ flex: 1, backgroundColor: '#1a237e' }} />;
 }

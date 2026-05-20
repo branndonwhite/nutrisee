@@ -40,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/bg/SPLASH_Background.png",
+          "image": "./assets/images/bg/SPLASH_PAGE.png",
           "resizeMode": "cover",
           "backgroundColor": "#1a237e",
           "dark": {
