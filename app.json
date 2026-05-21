@@ -19,7 +19,7 @@
     "android": {
       "icon": "./assets/images/ICON_N.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/bg/Icon_N.png",
+        "foregroundImage": "./assets/images/ICON_N.png",
         "backgroundImage": "./assets/images/Icon_BG.png"
       },
       "edgeToEdgeEnabled": true,
