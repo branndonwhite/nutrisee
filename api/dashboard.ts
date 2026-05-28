@@ -1,7 +1,7 @@
 import client from './client';
 
-export const getAIOverview = async (): Promise<string> => {
-  const response = await client.get('/dashboard/ai-overview');
+export const getAIOverview = async (force = false): Promise<string> => {
+  const response = await client.get(`/dashboard/ai-overview${force ? '?force=true' : ''}`);
   return response.data.overview;
 };
 

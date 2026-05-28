@@ -167,6 +167,7 @@ export default function PersonalInfoScreen() {
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleDateChange}
+            minimumDate={new Date(new Date().getFullYear() - 100, new Date().getMonth(), new Date().getDate())}
             maximumDate={new Date()}
           />
         )}
