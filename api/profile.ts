@@ -18,8 +18,8 @@ export const uploadProfileImage = async (uri: string) => {
   return response.data.avatar_url;
 };
 
-export const getAITips = async () => {
-  const response = await client.get('/profile/ai-tips');
+export const getAITips = async (force = false) => {
+  const response = await client.get(`/profile/ai-tips${force ? '?force=true' : ''}`);
   return response.data.tips;
 };
 

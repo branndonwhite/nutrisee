@@ -21,7 +21,7 @@ import { COLORS } from '../../constants/colors';
 import BlurContainer from '../../components/BlurContainer';
 import {
   NIcon, AIOverviewIcon, CalorieIcon, AchievementIcon,
-  DietIcon, FavIcon, NutriscanIcon, UpdateIcon, MaleIcon, FemaleIcon, TextIcon
+  DietIcon, FavIcon, NutriscanIcon, UpdateIcon, MaleIcon, FemaleIcon, TextIcon, GiziIcon
 } from '../../assets/images/icon';
 import { statue, body, fish } from '../../assets/images/bg-photo';
 import { getDailyStats, getAIOverview, DailyStats } from '../../api/dashboard';
@@ -107,6 +107,8 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<DailyStats | null>(null);
   const [aiOverview, setAiOverview] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showSpinner, setShowSpinner] = useState(false);
   const [selectedNutrients, setSelectedNutrients] = useState<NutrientKey[]>(DEFAULT_NUTRIENTS);
   const [pendingNutrients, setPendingNutrients] = useState<NutrientKey[]>(DEFAULT_NUTRIENTS);
   const [showNutrientPicker, setShowNutrientPicker] = useState(false);
@@ -158,6 +160,35 @@ export default function HomeScreen() {
     }, [])
   );
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [statsResult, overviewResult] = await Promise.allSettled([
+        getDailyStats(),
+        getAIOverview(true), // force=true bypasses cache
+      ]);
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+      if (overviewResult.status === 'fulfilled') setAiOverview(overviewResult.value);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Pin indicator while refreshing; only hide spinner AFTER the fade completes
+  // so there's no content flash when the refresh finishes
+  useEffect(() => {
+    if (refreshing) {
+      pullAnim.setValue(1);
+      setShowSpinner(true);
+    } else {
+      Animated.timing(pullAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setShowSpinner(false));
+    }
+  }, [refreshing]);
+
   const todayStr = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -176,6 +207,8 @@ export default function HomeScreen() {
   const translateY = useRef(new Animated.Value(0)).current;
   // Fade cards in only after initial position is set — prevents visible jump on first paint
   const cardStackOpacity = useRef(new Animated.Value(0)).current;
+  // Pull-to-refresh indicator: 0 = hidden, 1 = fully pulled / refreshing
+  const pullAnim = useRef(new Animated.Value(0)).current;
 
   // ─── Snap position calculation ──────────────────────────────────
   // translateY needed to center card[i] in the viewport:
@@ -241,15 +274,38 @@ export default function HomeScreen() {
       onPanResponderGrant: () => {
         translateY.stopAnimation();
         translateY.extractOffset();
+        pullAnim.stopAnimation();
       },
 
-      onPanResponderMove: Animated.event(
-        [null, { dy: translateY }],
-        { useNativeDriver: false }
-      ),
+      onPanResponderMove: (_, gestureState) => {
+        translateY.setValue(gestureState.dy);
+        // Only show pull indicator for slow, deliberate downward drags at card 0.
+        // Fast swipes (vy ≥ 0.8) are navigation flicks — don't show the indicator.
+        if (currentIndexRef.current === 0 && gestureState.dy > 0 && gestureState.vy < 0.8) {
+          pullAnim.setValue(Math.min(gestureState.dy / 40, 1.3));
+        } else {
+          pullAnim.setValue(0);
+        }
+      },
 
       onPanResponderRelease: (_, { dy, vy }) => {
         translateY.flattenOffset();
+
+        // Pull-to-refresh: swipe down hard enough at first card
+        // Refresh only for slow deliberate pulls (vy < 0.8), not fast flicks
+        if (currentIndexRef.current === 0 && dy > 40 && vy < 0.8) {
+          handleRefresh(); // sets refreshing=true → useEffect pins pullAnim at 1
+          snapTo(0);
+          return;
+        }
+
+        // Not a refresh gesture — animate indicator back to hidden
+        Animated.timing(pullAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+
         const SWIPE_THRESHOLD = 40;
         const VEL_THRESHOLD = 0.3;
         let next = currentIndexRef.current;
@@ -264,6 +320,11 @@ export default function HomeScreen() {
       onPanResponderTerminate: () => {
         translateY.flattenOffset();
         snapTo(currentIndexRef.current);
+        Animated.timing(pullAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
       },
     })
   ).current;
@@ -409,7 +470,7 @@ export default function HomeScreen() {
                       style={styles.addButton}
                       onPress={() => { setPendingNutrients(selectedNutrients); setShowNutrientPicker(true); }}
                     >
-                      <Text style={styles.addButtonText}>+</Text>
+                      <GiziIcon width={54} height={54} fill="#fff" />
                     </TouchableOpacity>
                   </View>
                 );
@@ -533,6 +594,35 @@ export default function HomeScreen() {
           {renderCardsSection()}
         </Animated.View>
       </View>
+
+      {/* Pull-to-refresh indicator — fades in just below the header */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.pullIndicator,
+          {
+            opacity: pullAnim.interpolate({
+              inputRange: [0, 0.2, 1.3],
+              outputRange: [0, 1, 1],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
+        {showSpinner ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Animated.Text style={[styles.pullArrow, {
+            transform: [{
+              rotate: pullAnim.interpolate({
+                inputRange: [0, 1, 1.3],
+                outputRange: ['0deg', '180deg', '180deg'],
+                extrapolate: 'clamp',
+              }),
+            }],
+          }]}>↓</Animated.Text>
+        )}
+      </Animated.View>
 
       {/* Header — floats above everything */}
       <BlurContainer
@@ -767,6 +857,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // ── Pull-to-refresh indicator ─────────────────────────────────────
+  pullIndicator: {
+    position: 'absolute',
+    top: HEADER_HEIGHT + 10,
+    alignSelf: 'center',
+    zIndex: 9,
+    backgroundColor: '#024FE9',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#024FE9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  pullArrow: {
+    fontSize: 18,
+    color: '#fff',
+    lineHeight: 22,
+  },
+
   // ── AI Card ───────────────────────────────────────────────────────
   aiCard: {
     backgroundColor: '#024FE9',
@@ -985,17 +1099,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addButton: {
-    width: 74,
-    height: 74,
-    borderRadius: 50,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: '#D9D9D9',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addButtonText: {
-    fontSize: 50,
-    color: '#FFFFFF',
-    fontFamily: FONTS.bold,
   },
 
   // ── Dark Cards ────────────────────────────────────────────────────

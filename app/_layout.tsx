@@ -41,8 +41,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Don't hide the native splash here — index.tsx hides it right before
-    // navigating so there is only one visible splash transition.
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;

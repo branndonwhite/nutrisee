@@ -7,11 +7,14 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { FONTS } from '../../constants/fonts';
 import { COLORS } from '../../constants/colors';
 import { useRegister } from '../../context/RegisterContext';
+import { completeProfile } from '../../api/auth';
 import { NextArrowIcon } from '@/assets/images/icon';
 
 const DIET_GOALS = [
@@ -22,13 +25,42 @@ const DIET_GOALS = [
 
 export default function DietGoalScreen() {
   const router = useRouter();
-  const { setData } = useRegister(); // ✅ added setData, removed unused data/clearData
+  const { setData, data, clearData } = useRegister();
   const [selected, setSelected] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selected) return;
     setData({ diet_goal: selected });
-    router.push('/(auth)/weight?mode=register-goal');
+
+    if (selected === 'maintain_weight') {
+      // Skip weight-target screen — use current weight as target
+      setLoading(true);
+      try {
+        await completeProfile({
+          nickname: data.nickname!,
+          gender: data.gender!,
+          date_of_birth: data.date_of_birth!,
+          height: data.height!,
+          weight: data.weight!,
+          activity_level: data.activity_level!,
+          diet_goal: selected,
+          target_weight: data.weight!,
+        });
+        await SecureStore.setItemAsync('onboarding_complete', 'true');
+        clearData();
+        router.replace('/(app)/home');
+      } catch (err: any) {
+        Alert.alert(
+          'Error',
+          err?.response?.data?.error || err?.message || 'Terjadi kesalahan',
+        );
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      router.push('/(auth)/weight?mode=register-goal');
+    }
   };
 
   return (
@@ -80,9 +112,9 @@ export default function DietGoalScreen() {
       {/* Bottom section */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
-          style={[styles.nextButton, !selected && styles.nextButtonDisabled]}
+          style={[styles.nextButton, (!selected || loading) && styles.nextButtonDisabled]}
           onPress={handleSubmit}
-          disabled={!selected}
+          disabled={!selected || loading}
         >
           <NextArrowIcon width={20} height={20} />
         </TouchableOpacity>
